@@ -1,0 +1,119 @@
+name: eboro
+description: A new Flutter application.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.11+09
+environment:
+  sdk: '>=2.17.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  date_format:
+  group_button:
+  flutter_polyline_points:
+  shared_preferences:
+  permission_handler:
+  image_picker:
+  flutter_datetime_picker_plus:
+  percent_indicator:
+  flutter_svg: ^2.0.10+1
+#  twemoji:
+  google_sign_in:
+  map_launcher:
+  flutter_multi_formatter:
+  audioplayers:
+  url_launcher:
+  provider:
+  webview_flutter:
+#  connectivity:
+  http:
+  fluttertoast: ^8.2.12
+  grouped_list:
+  checkbox_grouped:
+  google_maps_flutter:
+  badges:
+  star_menu:
+  font_awesome_flutter:
+  pin_code_fields:
+  cached_network_image:
+  localstorage:
+  sunmi_printer_plus:
+  time_machine:
+  mask_text_input_formatter:
+  image:
+  the_apple_sign_in:
+  flutter_launcher_icons:
+  bottom_picker:
+  google_maps_widget:
+  google_api_headers: ^5.1.0
+  geolocator: ^9.0.2
+  geocoding: ^2.0.1
+  flutter_typeahead: ^4.0.1
+  intl:
+  flutter_secure_storage:
+  webview_flutter_wkwebview: 
+  audioplayers_web:
+#  connectivity_for_web:
+  geolocator_web: 
+  google_sign_in_web: 
+  image_picker_for_web: 
+  shared_preferences_web: 
+  url_launcher_web: 
+  maps_toolkit: 
+  uuid:
+  video_player:
+
+  collection: any
+  pay: ^3.3.0
+  flutter_stripe: ^11.3.0
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.6
+  flutter_local_notifications: ^17.2.4
+  firebase_auth: ^5.7.0
+  qr_flutter: ^4.1.0
+  share_plus: ^7.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "/Users/codiano/Desktop/flutter-eboro/images/icons/playstore.png"
+
+flutter:
+
+  uses-material-design: true
+  assets:
+    - images/icons/
+    - Lang/it.json
+    - Lang/en.json
+    - Lang/ar.json
+    - Lang/fr.json
+    - Lang/de.json
+    - Lang/es.json
+    - Lang/pt.json
+    - Lang/tr.json
+    - Lang/ro.json
+    - Lang/sq.json
+    - Lang/zh.json
+    - Lang/hi.json
+    - Lang/ru.json
+    - sound/sound.mp3
+    - packages/time_machine/data/cultures/cultures.bin
+    - packages/time_machine/data/tzdb/tzdb.bin
+    - assets/apple_pay_config.json
+    - assets/google_pay_config.json
+
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: fonts/Nunito-SemiBold.ttf
+
+flutter_intl:
+  enabled: true

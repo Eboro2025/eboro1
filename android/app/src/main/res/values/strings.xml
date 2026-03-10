@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Eboro</string>
+    <string name="facebook_app_id">1301206500686671</string>
+    <string name="facebook_client_token">477a560bf5646ce882137ca91ef607ab</string>
+    <string name="fb_login_protocol_scheme">fb1301206500686671</string>
+    <string name="client_id">com.codiano.eboro.signin</string>
+    <string name="team_id">97A3NA2QQ4</string>
+    <string name="key_id">RPP4VGYUNT</string>
+</resources>

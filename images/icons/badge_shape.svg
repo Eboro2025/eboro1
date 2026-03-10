@@ -1,0 +1,29 @@
+<svg width="768" height="768" viewBox="0 0 768 768" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shapeShadow" x="90" y="40" width="588" height="700" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="12.5" flood-color="#000000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="768" height="768" fill="none"/>
+
+  <path
+    d="M384 80C430 140 540 120 585 180C620 225 620 335 620 384C620 433 620 543 585 588C540 648 430 628 384 688C338 628 228 648 183 588C148 543 148 433 148 384C148 335 148 225 183 180C228 120 338 140 384 80Z"
+    fill="none"
+    stroke="#F3E9DC"
+    stroke-width="22"
+    filter="url(#shapeShadow)"
+  />
+
+  <path d="M581 119L589 142L581 165L573 142Z" fill="#EFD2B8"/>
+  <path d="M558 142L581 133L604 142L581 151Z" fill="#EFD2B8"/>
+
+  <path d="M106 542L114 565L106 588L98 565Z" fill="#EFD2B8"/>
+  <path d="M83 565L106 556L129 565L106 574Z" fill="#EFD2B8"/>
+
+  <path d="M150 583L158 607L150 631L142 607Z" fill="#EFD2B8"/>
+  <path d="M126 607L150 598L174 607L150 616Z" fill="#EFD2B8"/>
+
+  <path d="M633 576L641 599L633 622L625 599Z" fill="#EFD2B8"/>
+  <path d="M610 599L633 590L656 599L633 608Z" fill="#EFD2B8"/>
+</svg>

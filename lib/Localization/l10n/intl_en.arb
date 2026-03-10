@@ -1,0 +1,347 @@
+{
+  "Getstarted": "Get started",
+  "@Getstarted": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "locale": "en",
+  "@locale": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "restaurant": "Restaurant",
+  "@restaurant": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "signin": "Sign In",
+  "@signin": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "signup": "Sign Up",
+  "@signup": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "language": "Language",
+  "@language": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "terms": "Terms & Conditions",
+  "@terms": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "email": "Email",
+  "@email": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "password": "Password",
+  "@password": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "forgetpassword": "Forget Password?",
+  "@forgetpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "donothaveanaccount": "Don't have an account?",
+  "@donothaveanaccount": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "name": "Name",
+  "@name": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "address": "Address",
+  "@address": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mobilenumber": "Mobile number",
+  "@mobilenumber": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "TermsandConditions": "By clicking on sign up you agree to the following Terms and Conditions",
+  "@TermsandConditions": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "alreadyhaveanaccount": "Already have an account?",
+  "@alreadyhaveanaccount": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "changeyourpassword": "Please enter your email to be able to change your password",
+  "@changeyourpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "send": "Send",
+  "@send": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mostsell": "Most sell",
+  "@mostsell": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "news": "New",
+  "@news": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "categories": "Categories",
+  "@categories": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "home": "Home",
+  "@home": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mycontacts": "My contacts",
+  "@mycontacts": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "pharmacy": "Pharmacy",
+  "@pharmacy": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "store": "Store",
+  "@store": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "supermarket": "Supermarket",
+  "@supermarket": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "party": "Party",
+  "@party": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "confirmpassword": "Confirm Password",
+  "@confirmpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "myfavorite": "My Favorite",
+  "@myfavorite": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mycart": "My Cart",
+  "@mycart": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "myprofile": "My Profile",
+  "@myprofile": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "myorders": "My Orders",
+  "@myorders": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "contactus": "Contact Us",
+  "@contactus": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "logout": "Sign Out",
+  "@logout": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "oldpassword": "Old Password",
+  "@oldpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "newpassword": "New Password",
+  "@newpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "confirmnewpassword": "Confirm New Password",
+  "@confirmnewpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "editmyprofile": "Edit My Profile",
+  "@editmyprofile": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "total": "Total",
+  "@total": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "subject": "Subject",
+  "@subject": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "typeyourmessage": "Type your message...",
+  "@typeyourmessage": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "contactinformation": "Contact Information",
+  "@contactinformation": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "message": "Message",
+  "@message": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "date": "Date",
+  "@date": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "state": "State",
+  "@state": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "description": "Description",
+  "@description": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "details": "Details",
+  "@details": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "addtocart": "Add to Cart",
+  "@addtocart": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "price": "Price",
+  "@price": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "category": "Category",
+  "@category": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "brand": "Brand",
+  "@brand": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "type": "Type",
+  "@type": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "size": "Size",
+  "@size": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "additions": "Additions",
+  "@additions": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "calories": "Calories",
+  "@calories": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "alcohol": "Alcohol",
+  "@alcohol": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "lard": "Lard",
+  "@lard": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "shippingaddress": "Shipping Address",
+  "@shippingaddress": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "subtotal": "Subtotal",
+  "@subtotal": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "tax": "Tax",
+  "@tax": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "shipping": "Shipping",
+  "@shipping": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "paymentmethod": "Payment Method",
+  "@paymentmethod": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "cash": "Cash",
+  "@cash": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "online": "Online",
+  "@online": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "cardnumber": "Numero di carta",
+  "@cardnumber": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "expirationdate": "Expiration Date",
+  "@expirationdate": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "yourorder": "Your Order",
+  "@yourorder": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "placeorder": "Place Order",
+  "@placeorder": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "1111": "2222",
+  "@1111": {
+    "type": "text",
+    "placeholders": {}
+  }
+}

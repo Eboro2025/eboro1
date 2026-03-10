@@ -1,0 +1,347 @@
+{
+  "Getstarted": "La maggior parte vende",
+  "@Getstarted": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "locale": "it",
+  "@locale": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "restaurant": "Ristorante",
+  "@restaurant": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "signin": "Accesso",
+  "@signin": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "signup": "Iscriviti",
+  "@signup": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "language": "La lingua",
+  "@language": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "terms": "Termini & Condizioni",
+  "@terms": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "email": "Email",
+  "@email": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "password": "Parola d'ordine",
+  "@password": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "forgetpassword": "Parola d'ordine?",
+  "@forgetpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "donothaveanaccount": "Non hai un account?",
+  "@donothaveanaccount": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "name": "Nome",
+  "@name": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "address": "Indirizzo",
+  "@address": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mobilenumber": "Numero di cellulare",
+  "@mobilenumber": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "TermsandConditions": "Cliccando su Iscriviti accetti i seguenti termini e condizioni",
+  "@TermsandConditions": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "alreadyhaveanaccount": "Hai già un account?",
+  "@alreadyhaveanaccount": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "changeyourpassword": "Inserisci la tua email per poter cambiare la tua password",
+  "@changeyourpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "send": "Spedire",
+  "@send": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mostsell": "La maggior parte vende",
+  "@mostsell": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "news": "Nuovo",
+  "@news": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "categories": "Categorie",
+  "@categories": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "home": "Casa",
+  "@home": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mycontacts": "I miei contatti",
+  "@mycontacts": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "pharmacy": "Farmacia",
+  "@pharmacy": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "store": "Negozio",
+  "@store": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "supermarket": "Supermercato",
+  "@supermarket": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "party": "Festa",
+  "@party": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "confirmpassword": "Conferma Password",
+  "@confirmpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "myfavorite": "Il mio preferito",
+  "@myfavorite": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "mycart": "Il mio carrello",
+  "@mycart": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "myprofile": "Il mio profilo",
+  "@myprofile": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "myorders": "Il mio ordini",
+  "@myorders": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "contactus": "Contattaci",
+  "@contactus": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "logout": "Disconnettersi",
+  "@logout": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "oldpassword": "Vecchia Password",
+  "@oldpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "newpassword": "Nuova Password",
+  "@newpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "confirmnewpassword": "Conferma la nuova password",
+  "@confirmnewpassword": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "editmyprofile": "Modifica il mio profilo",
+  "@editmyprofile": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "total": "Totale",
+  "@total": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "subject": "Soggetto",
+  "@subject": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "typeyourmessage": "Scrivi il tuo messaggio ...",
+  "@typeyourmessage": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "contactinformation": "Informazioni sui contatti",
+  "@contactinformation": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "message": "Messaggio",
+  "@message": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "date": "Data",
+  "@date": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "state": "Stato",
+  "@state": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "description": "Descrizione",
+  "@description": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "details": "Dettagli",
+  "@details": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "addtocart": "Aggiungi al carrello",
+  "@addtocart": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "price": "Prezzo",
+  "@price": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "category": "Categoria",
+  "@category": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "brand": "Marca",
+  "@brand": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "type": "Genere",
+  "@type": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "size": "Taglia",
+  "@size": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "additions": "Aggiunte",
+  "@additions": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "calories": "Calorie",
+  "@calories": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "alcohol": "Alcol",
+  "@alcohol": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "lard": "Lardo",
+  "@lard": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "shippingaddress": "Indirizzo di spedizione",
+  "@shippingaddress": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "subtotal": "Totale parziale",
+  "@subtotal": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "tax": "Imposta",
+  "@tax": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "shipping": "Spedizione",
+  "@shipping": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "paymentmethod": "Metodo di pagamento",
+  "@paymentmethod": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "cash": "Contanti",
+  "@cash": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "online": "In linea",
+  "@online": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "cardnumber": "Card Number",
+  "@cardnumber": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "expirationdate": "Data di scadenza",
+  "@expirationdate": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "yourorder": "Il tuo ordine",
+  "@yourorder": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "placeorder": "Invia ordine",
+  "@placeorder": {
+    "type": "text",
+    "placeholders": {}
+  },
+  "1111": "2222",
+  "@1111": {
+    "type": "text",
+    "placeholders": {}
+  }
+}

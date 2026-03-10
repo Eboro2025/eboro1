@@ -1,0 +1,13 @@
+{
+  "provider": "apple_pay",
+  "data": {
+    "merchantIdentifier": "merchant.com.eboro.app",
+    "displayName": "Eboro",
+    "merchantCapabilities": ["3DS", "debit", "credit"],
+    "supportedNetworks": ["amex", "visa", "masterCard", "discover"],
+    "countryCode": "IT",
+    "currencyCode": "EUR",
+    "requiredBillingContactFields": [],
+    "requiredShippingContactFields": []
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "provider": "google_pay",
+  "data": {
+    "environment": "TEST",
+    "apiVersion": 2,
+    "apiVersionMinor": 0,
+    "allowedPaymentMethods": [
+      {
+        "type": "CARD",
+        "parameters": {
+          "allowedAuthMethods": ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+          "allowedCardNetworks": ["AMEX", "MASTERCARD", "VISA", "DISCOVER"]
+        },
+        "tokenizationSpecification": {
+          "type": "PAYMENT_GATEWAY",
+          "parameters": {
+            "gateway": "stripe",
+            "stripe:version": "2020-08-27",
+            "stripe:publishableKey": "pk_live_51JcFBIGPk9GE5RGdagDFQXdY3bXsGPoHAZ6dBl9eRZiG5Q7MMOwbPFqDiNPNNJkga0T8aqHZHIfAOtEF5Fk3P3QP008gs6N9ND"
+          }
+        }
+      }
+    ],
+    "merchantInfo": {
+      "merchantName": "Eboro"
+    },
+    "transactionInfo": {
+      "totalPriceStatus": "FINAL",
+      "countryCode": "IT",
+      "currencyCode": "EUR"
+    }
+  }
+}

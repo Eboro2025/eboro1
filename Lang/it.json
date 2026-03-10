@@ -1,0 +1,15 @@
+{
+  "confirm_address": "Conferma indirizzo",
+  "please_fill_address": "Compila le informazioni di contatto e indirizzo:",
+  "enter_whatsapp": "Numero WhatsApp",
+  "enter_house": "Inserisci numero civico",
+  "enter_intercom": "Inserisci nome citofono",
+  "house_required": "Il numero civico è obbligatorio",
+  "intercom_required": "Il citofono è obbligatorio",
+  "house": "N° Civico",
+  "intercom": "Citofono",
+  "Leave": "Lasciare",
+  "Handover": "Consegna a mano",
+  "Neighbor": "Vicino",
+  "Drop_off": "Punto di ritiro"
+}

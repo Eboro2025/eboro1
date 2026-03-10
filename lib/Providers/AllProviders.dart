@@ -1,0 +1,1217 @@
+import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:eboro/main.dart';
+import 'package:eboro/API/Auth.dart';
+import 'package:eboro/API/Provider.dart';
+
+import 'package:eboro/Helper/ProviderData.dart';
+import 'package:eboro/Widget/Search.dart';
+import 'package:eboro/Widget/Providers.dart';
+import 'package:eboro/RealTime/Provider/ProviderController.dart';
+import 'package:eboro/Client/Home.dart' as client_home; // CartButton
+import 'package:eboro/Client/Addresses.dart';
+import 'package:eboro/Client/MyCart.dart';
+
+import 'package:eboro/Client/MyVideo.dart'; // MyVideo
+import 'package:eboro/Client/MyVideo.dart'; // MyVideo
+
+// Location
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:eboro/package/lib/google_map_location_picker_flutter.dart';
+import 'package:eboro/Widget/Progress.dart';
+
+// Audio Player for notifications
+import 'package:audioplayers/audioplayers.dart';
+import 'dart:convert';
+
+class AllProviders extends StatefulWidget {
+  final String? catID;
+  final String? name;
+
+  const AllProviders({
+    Key? key,
+    required this.catID,
+    required this.name,
+  }) : super(key: key);
+
+  @override
+  AllProvidersState createState() => AllProvidersState();
+}
+
+class AllProvidersState extends State<AllProviders>
+    with SingleTickerProviderStateMixin {
+  String? _selectedCategoryName;
+  String? _selectedCategoryIdStr;
+
+  // Filters
+  double _maxDistance = 50.0; // km
+  RangeValues _priceRange = RangeValues(0, 100); // euro
+  double _maxDeliveryFee = 10.0; // euro
+  String _sortBy = 'distance'; // distance, price, rating
+
+  // GPS cached state (pre-fetched in initState)
+  String _gpsAddress = "";
+  bool _gpsLoading = true;
+  Position? _cachedGpsPosition;
+
+  // Audio player for notifications
+  final AudioPlayer _notificationPlayer = AudioPlayer();
+
+  // Animation for pulsing effect
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize animation for pulsing effect
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    // Pre-fetch GPS position in background so it's ready when bottom sheet opens
+    _prefetchGpsPosition();
+
+    Future.microtask(() async {
+      if (!mounted) return;
+
+      try {
+        final provider =
+            Provider.of<ProviderController>(context, listen: false);
+
+        // Load locally cached data immediately (without waiting for API)
+        await provider.loadFromCache();
+        // Pre-cache provider images
+        if (mounted) provider.precacheProviderImages(context);
+
+        if (widget.catID != null) {
+          final catIdStr = widget.catID!.toString();
+          final catNameStr = widget.name?.toString() ?? "";
+
+          _selectedCategoryIdStr = catIdStr;
+          _selectedCategoryName = catNameStr;
+
+          // Update from API in background (user sees cached data immediately)
+          await Future.wait<void>([
+            Provider2.showFilter(catIdStr, catNameStr, context).then((_) {}),
+            provider.Providers(catIdStr, context).then((_) {}),
+          ]);
+        } else {
+          // Show all providers without filtering
+          await provider.Providers(null, context);
+        }
+        // Pre-cache images after API load
+        if (mounted) provider.precacheProviderImages(context);
+      } catch (e) {
+        // print('❌ Error loading providers: $e');
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationPlayer.dispose(); // Clean up audio player
+    _pulseController.dispose(); // Clean up animation controller
+    super.dispose();
+  }
+
+  String extractStreetOnly(String fullAddress) {
+    try {
+      final parts = fullAddress.split(',');
+      if (parts.length >= 2) {
+        final street = parts[0].trim();
+        final number = parts[1].trim();
+        return "$street $number";
+      }
+      return fullAddress;
+    } catch (_) {
+      return fullAddress;
+    }
+  }
+
+  String _composeAddressFromPlacemark(Placemark p) {
+    final street = (p.street ?? '').trim();
+    final houseNumber = (p.subThoroughfare ?? '').trim();
+    final cap = (p.postalCode ?? '').trim();
+    final city = (p.locality ?? '').trim();
+    final country = (p.country ?? '').trim();
+
+    final streetWithNumber = [street, houseNumber]
+        .where((value) => value.isNotEmpty)
+        .join(' ');
+
+    return [streetWithNumber, cap, city, country]
+        .where((value) => value.isNotEmpty)
+        .join(', ');
+  }
+
+  Future<LatLng> _getCurrentLocation() async {
+    Position? pos = await Geolocator.getLastKnownPosition();
+    if (pos != null && pos.latitude != 0.0 && pos.longitude != 0.0) {
+      return LatLng(pos.latitude, pos.longitude);
+    }
+    pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.medium,
+      timeLimit: const Duration(seconds: 8),
+    );
+    return LatLng(pos.latitude, pos.longitude);
+  }
+
+  /// Pre-fetch GPS position in initState so it's ready for bottom sheet only
+  /// Never changes the user's address - the user must choose themselves
+  void _prefetchGpsPosition() async {
+    try {
+      // Verify GPS permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        _gpsLoading = false;
+        if (mounted) setState(() {});
+        return;
+      }
+
+      // First: get last known position instantly
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null && _cachedGpsPosition == null) {
+        _cachedGpsPosition = lastPos;
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            lastPos.latitude, lastPos.longitude,
+          );
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            _gpsAddress = _composeAddressFromPlacemark(p);
+          }
+        } catch (_) {}
+        _gpsLoading = false;
+        if (mounted) setState(() {});
+      }
+
+      // Second: get accurate position in background (non-blocking)
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 8),
+      );
+      _cachedGpsPosition = pos;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          pos.latitude, pos.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          _gpsAddress = _composeAddressFromPlacemark(p);
+        }
+      } catch (_) {}
+      _gpsLoading = false;
+      if (mounted) setState(() {});
+    } catch (_) {
+      _gpsLoading = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  // ===================== ADDRESS HISTORY =====================
+  static const String _addressHistoryKey = 'address_history';
+  static const int _maxHistoryItems = 4;
+
+  /// Load saved address history from SharedPreferences
+  List<Map<String, String>> _loadAddressHistory() {
+    final jsonStr = MyApp2.prefs.getString(_addressHistoryKey);
+    if (jsonStr == null || jsonStr.isEmpty) return [];
+    try {
+      final List<dynamic> list = jsonDecode(jsonStr);
+      final history = list.cast<Map<String, dynamic>>().map((e) =>
+        e.map((k, v) => MapEntry(k, v.toString()))
+      ).toList();
+
+      final cleanedHistory = history.where((item) {
+        final address = (item['address'] ?? '').trim().toLowerCase();
+        if (address.isEmpty) return false;
+        if (address.contains('via lario')) return false;
+        if (address == 'posizione corrente') return false;
+        if (address == 'la tua posizione') return false;
+        if (address == 'current location') return false;
+        return true;
+      }).toList();
+
+      if (cleanedHistory.length != history.length) {
+        MyApp2.prefs.setString(_addressHistoryKey, jsonEncode(cleanedHistory));
+      }
+
+      return cleanedHistory;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Save an address to history (most recent first, max 4)
+  void _saveToAddressHistory(String address, String lat, String lng) {
+    if (address.isEmpty) return;
+    final history = _loadAddressHistory();
+    // Remove duplicate (same address text)
+    history.removeWhere((h) => h['address'] == address);
+    // Insert at top
+    history.insert(0, {'address': address, 'lat': lat, 'lng': lng});
+    // Keep max items
+    if (history.length > _maxHistoryItems) {
+      history.removeRange(_maxHistoryItems, history.length);
+    }
+    MyApp2.prefs.setString(_addressHistoryKey, jsonEncode(history));
+  }
+
+  /// Select a saved address from history
+  Future<void> _selectSavedAddress(Map<String, String> addr) async {
+    Progress.progressDialogue(context);
+    try {
+      Auth2.user!.deliveryAddress = addr['address'];
+      Auth2.user!.deliveryLat = addr['lat'];
+      Auth2.user!.deliveryLong = addr['lng'];
+      // Update coordinates on server for distance/shipping calculation
+      await Auth2.updateDeliveryCoordinates(addr['lat']!, addr['lng']!, context);
+      if (!mounted) return;
+      Progress.dimesDialog(context);
+      Provider2.clearProvidersCache();
+      final provider = Provider.of<ProviderController>(context, listen: false);
+      await provider.updateProvider(_selectedCategoryIdStr, force: true);
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) Progress.dimesDialog(context);
+    }
+  }
+
+  Future<void> _openLocationPicker() async {
+    if (!mounted) return;
+    try {
+      try {
+        var permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      // Get position with fallback
+      LatLng myPosition;
+      try {
+        myPosition = await _getCurrentLocation();
+      } catch (_) {
+        myPosition = LatLng(
+          double.tryParse(Auth2.user?.lat ?? '') ?? 45.4642,
+          double.tryParse(Auth2.user?.long ?? '') ?? 9.1900,
+        );
+      }
+
+      if (!mounted) return;
+
+      final result = await showGoogleMapLocationPicker(
+        pinWidget: Icon(Icons.location_pin, color: myColor, size: 50),
+        pinColor: myColor,
+        context: context,
+        addressPlaceHolder: "Seleziona qui",
+        addressTitle: "Indirizzo : ",
+        apiKey: "AIzaSyAB9JpHw1iVlBH3izJJfsuPGKOqxLsXSpk",
+        appBarTitle: "Indirizzo di consegna",
+        confirmButtonColor: myColor,
+        confirmButtonText: "Salva",
+        confirmButtonTextColor: Colors.white,
+        country: "it",
+        language: MyApp2.apiLang.toString(),
+        searchHint: "Cerca",
+        initialLocation: myPosition,
+        myLocation: myPosition,
+      );
+
+      if (result == null || !mounted) return;
+
+      setState(() {
+        Auth2.user!.deliveryAddress = result.address;
+        Auth2.user!.deliveryLat = result.latlng.latitude.toString();
+        Auth2.user!.deliveryLong = result.latlng.longitude.toString();
+      });
+
+      // Save to address history
+      _saveToAddressHistory(
+        result.address,
+        result.latlng.latitude.toString(),
+        result.latlng.longitude.toString(),
+      );
+
+      // Update server coordinates and reload providers in parallel
+      Provider2.clearProvidersCache();
+      final provider = Provider.of<ProviderController>(context, listen: false);
+      await Future.wait<dynamic>([
+        Auth2.updateDeliveryCoordinates(
+          result.latlng.latitude.toString(),
+          result.latlng.longitude.toString(),
+          context,
+        ),
+        provider.updateProvider(_selectedCategoryIdStr, force: true),
+      ]);
+
+      if (!mounted) return;
+
+      if (Auth2.user!.email != "info@eboro.com") {
+        final houseEmpty =
+            Auth2.user?.house == null || Auth2.user!.house!.isEmpty;
+        final mobileEmpty =
+            Auth2.user?.mobile == null || Auth2.user!.mobile!.isEmpty;
+
+        if (houseEmpty || mobileEmpty) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AddAddress()),
+          );
+        }
+      }
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      // Prevent crash - silently handle
+    }
+  }
+
+  void _showFiltersBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return SafeArea(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.75,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Handle bar
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Filtri",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                _maxDistance = 50.0;
+                                _priceRange = RangeValues(0, 100);
+                                _maxDeliveryFee = 10.0;
+                                _sortBy = 'distance';
+                              });
+                              // Reset all restaurants
+                              final provider = Provider.of<ProviderController>(context, listen: false);
+                              provider.filteredProviders = List.from(provider.providers ?? []);
+                              setState(() {});
+                            },
+                            child: Text(
+                              "Ripristina",
+                              style: TextStyle(color: myColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+
+                    // Content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Distanza massima
+                            Text(
+                              "Distanza massima",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Slider(
+                                    value: _maxDistance,
+                                    min: 1,
+                                    max: 50,
+                                    divisions: 49,
+                                    activeColor: myColor,
+                                    label: '${_maxDistance.round()} km',
+                                    onChanged: (value) {
+                                      setModalState(() {
+                                        _maxDistance = value;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: myColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${_maxDistance.round()} km',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: myColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Fascia di prezzo
+                            Text(
+                              "Fascia di prezzo",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            RangeSlider(
+                              values: _priceRange,
+                              min: 0,
+                              max: 100,
+                              divisions: 20,
+                              activeColor: myColor,
+                              labels: RangeLabels(
+                                '€${_priceRange.start.round()}',
+                                '€${_priceRange.end.round()}',
+                              ),
+                              onChanged: (values) {
+                                setModalState(() {
+                                  _priceRange = values;
+                                });
+                              },
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('€${_priceRange.start.round()}',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade600)),
+                                  Text('€${_priceRange.end.round()}',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade600)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Costo di consegna massimo
+                            Text(
+                              "Costo di consegna massimo",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Slider(
+                                    value: _maxDeliveryFee,
+                                    min: 0,
+                                    max: 10,
+                                    divisions: 20,
+                                    activeColor: myColor,
+                                    label:
+                                        '€${_maxDeliveryFee.toStringAsFixed(1)}',
+                                    onChanged: (value) {
+                                      setModalState(() {
+                                        _maxDeliveryFee = value;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: myColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '€${_maxDeliveryFee.toStringAsFixed(1)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: myColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Ordina per
+                            Text(
+                              "Ordina per",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                _buildSortChip(
+                                  'Distanza',
+                                  'distance',
+                                  Icons.near_me,
+                                  setModalState,
+                                ),
+                                _buildSortChip(
+                                  'Prezzo',
+                                  'price',
+                                  Icons.euro,
+                                  setModalState,
+                                ),
+                                _buildSortChip(
+                                  'Valutazione',
+                                  'rating',
+                                  Icons.star,
+                                  setModalState,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Footer buttons
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey.shade300),
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                "Annulla",
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _applyBottomSheetFilters();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: myColor,
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                "Applica",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSortChip(
+      String label, String value, IconData icon, StateSetter setModalState) {
+    final isSelected = _sortBy == value;
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon,
+              size: 16,
+              color: isSelected ? Colors.white : Colors.grey.shade600),
+          SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        setModalState(() {
+          _sortBy = value;
+        });
+      },
+      backgroundColor: Colors.grey.shade100,
+      selectedColor: myColor,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.black87,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      checkmarkColor: Colors.white,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    );
+  }
+
+  void _applyBottomSheetFilters() {
+    final provider = Provider.of<ProviderController>(context, listen: false);
+    final allProviders = provider.providers ?? [];
+
+    List<ProviderData> filtered = allProviders.where((p) {
+      // Distance filter
+      final distance = double.tryParse(p.Delivery?.Distance ?? '') ?? 0.0;
+      if (distance > 0 && distance > _maxDistance) return false;
+
+      // Delivery fee filter
+      final deliveryFee = double.tryParse(p.Delivery?.shipping ?? '') ?? 0.0;
+      if (deliveryFee > _maxDeliveryFee) return false;
+
+      return true;
+    }).toList();
+
+    // Sort by selected option
+    switch (_sortBy) {
+      case 'distance':
+        filtered.sort((a, b) {
+          final dA = double.tryParse(a.Delivery?.Distance ?? '') ?? 999;
+          final dB = double.tryParse(b.Delivery?.Distance ?? '') ?? 999;
+          return dA.compareTo(dB);
+        });
+        break;
+      case 'price':
+        filtered.sort((a, b) {
+          final pA = double.tryParse(a.Delivery?.shipping ?? '') ?? 999;
+          final pB = double.tryParse(b.Delivery?.shipping ?? '') ?? 999;
+          return pA.compareTo(pB);
+        });
+        break;
+      case 'rating':
+        filtered.sort((a, b) {
+          final rA = double.tryParse(a.rateRatio ?? '0') ?? 0;
+          final rB = double.tryParse(b.rateRatio ?? '0') ?? 0;
+          return rB.compareTo(rA);
+        });
+        break;
+    }
+
+    provider.filteredProviders = filtered;
+    setState(() {});
+  }
+
+  void _showLocationOptions() {
+    final addressHistory = _loadAddressHistory();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Text(
+                      "Consegna a...",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2E3333),
+                      ),
+                    ),
+                  ),
+
+                  // Search option
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _openLocationPicker();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search, color: myColor, size: 24),
+                          const SizedBox(width: 16),
+                          Text("Cerca",
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: myColor)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Divider(height: 1, color: Colors.grey.shade200),
+
+                  // GPS location option
+                  InkWell(
+                    onTap: _gpsLoading
+                        ? null
+                        : () async {
+                            Navigator.pop(ctx);
+                            Progress.progressDialogue(context);
+                            try {
+                              // Always fetch a fresh GPS position when user taps current location
+                              Position pos = await Geolocator.getCurrentPosition(
+                                desiredAccuracy: LocationAccuracy.medium,
+                              ).timeout(const Duration(seconds: 10));
+                              _cachedGpsPosition = pos;
+
+                              Auth2.user!.lat = pos.latitude.toString();
+                              Auth2.user!.long = pos.longitude.toString();
+
+                              // Resolve address from current coordinates every time
+                              String resolvedAddress = "";
+                              try {
+                                List<Placemark> placemarks =
+                                    await placemarkFromCoordinates(
+                                  pos.latitude,
+                                  pos.longitude,
+                                );
+                                if (placemarks.isNotEmpty) {
+                                  final p = placemarks.first;
+                                  resolvedAddress =
+                                      _composeAddressFromPlacemark(p);
+                                }
+                              } catch (_) {}
+
+                              if (resolvedAddress
+                                  .replaceAll(',', '')
+                                  .trim()
+                                  .isEmpty) {
+                                resolvedAddress =
+                                    "Lat ${pos.latitude.toStringAsFixed(6)}, Lng ${pos.longitude.toStringAsFixed(6)}";
+                              }
+
+                              _gpsAddress = resolvedAddress;
+                              Auth2.user!.deliveryAddress = resolvedAddress;
+                              Auth2.user!.deliveryLat = pos.latitude.toString();
+                              Auth2.user!.deliveryLong = pos.longitude.toString();
+
+                              _saveToAddressHistory(
+                                resolvedAddress,
+                                pos.latitude.toString(),
+                                pos.longitude.toString(),
+                              );
+                              // Update coordinates on server for distance/shipping
+                              await Auth2.updateDeliveryCoordinates(
+                                pos.latitude.toString(), pos.longitude.toString(), context);
+                              if (!mounted) return;
+                              Progress.dimesDialog(context);
+                              Provider2.clearProvidersCache();
+                              final provider = Provider.of<ProviderController>(context, listen: false);
+                              await provider.updateProvider(_selectedCategoryIdStr, force: true);
+                              if (mounted) setState(() {});
+                            } catch (_) {
+                              if (mounted) Progress.dimesDialog(context);
+                            }
+                          },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.near_me_outlined, color: Color(0xFF2E3333), size: 24),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Text("La tua posizione",
+                              style: TextStyle(fontSize: 16, color: Color(0xFF2E3333))),
+                          ),
+                          if (_gpsLoading)
+                            SizedBox(width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey.shade400)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Recent addresses section
+                  if (addressHistory.isNotEmpty) ...[
+                    Divider(height: 1, color: Colors.grey.shade200),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                      child: Text(
+                        "Ricerche recenti",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade500,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: addressHistory.length,
+                        itemBuilder: (context, index) {
+                          final addr = addressHistory[index];
+                          final fullAddr = addr['address'] ?? '';
+                          final shortAddr = extractStreetOnly(fullAddr);
+                          // Get city from full address
+                          final parts = fullAddr.split(',');
+                          final city = parts.length >= 3 ? parts[2].trim() : '';
+
+                          return InkWell(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _selectSavedAddress(addr);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.access_time, color: Colors.grey.shade400, size: 20),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          shortAddr,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF2E3333),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (city.isNotEmpty)
+                                          Text(
+                                            city,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey.shade500,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================= BUILD ==============================
+
+  @override
+  Widget build(BuildContext context) {
+    final fullAddress = Auth2.user!.activeAddress ?? "Select location";
+    final shortAddress = extractStreetOnly(fullAddress);
+
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor:
+            const Color(0xFFF5F6FA), // Grigio chiaro invece del bianco scuro
+
+        // Cart button hidden on AllProviders page
+        floatingActionButton: null,
+
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFF5F6FA),
+          elevation: 0,
+          centerTitle: false,
+          iconTheme: const IconThemeData(color: Colors.black87),
+          toolbarHeight: 48,
+          titleSpacing: 16,
+          title: GestureDetector(
+            onTap: _showLocationOptions,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 20,
+                  color: myColor,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    shortAddress,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: MyApp2.fontSize14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.expand_more,
+                  size: 20,
+                  color: Colors.grey.shade500,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            // Cart indicator - shown when there are items in the cart
+            Consumer<CartTextProvider>(
+              builder: (context, cart, child) {
+                final hasItems = cart.cart?.cart_items != null &&
+                    cart.cart!.cart_items!.isNotEmpty;
+                final itemCount = cart.cart?.cart_items?.fold<int>(0, (sum, item) => sum + (item.qty ?? 0)) ?? 0;
+
+                if (hasItems) {
+                  return AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => MyCart()),
+                          );
+                        },
+                        child: Container(
+                          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: myColor,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: myColor.withOpacity(0.4 * _pulseAnimation.value),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.shopping_cart,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              SizedBox(width: 6),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$itemCount',
+                                  style: TextStyle(
+                                    color: myColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }
+
+                // If cart is empty, show the regular notification icon
+                return IconButton(
+                  icon: Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.black87,
+                    size: 26,
+                  ),
+                  onPressed: () async {
+                    try {
+                      await _notificationPlayer.stop();
+                      await _notificationPlayer.setVolume(0.3);
+                      await _notificationPlayer.play(AssetSource('sound.mp3'));
+                    } catch (e) {
+                      // print('Error playing sound: $e');
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Pagina notifiche'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+            SizedBox(width: 4),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, size: 20, color: Colors.grey.shade500),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Cerca ristoranti...",
+                        style: TextStyle(
+                          fontSize: MyApp2.fontSize14,
+                          color: Colors.grey.shade500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // GestureDetector(
+                    //   onTap: _showFiltersBottomSheet,
+                    //   child: Icon(Icons.tune, size: 20, color: myColor),
+                    // ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        body: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Lista ristoranti
+            Expanded(
+              child: Providers(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

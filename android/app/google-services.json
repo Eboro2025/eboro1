@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "646379856639",
+    "project_id": "eboro-24b2e",
+    "storage_bucket": "eboro-24b2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:646379856639:android:ac78cb67ff2ca63ae2a2ca",
+        "android_client_info": {
+          "package_name": "com.codiano.eboro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "646379856639-ho3tvdnvjc54g6kbejbjtgjdis75mtpn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.codiano.eboro",
+            "certificate_hash": "9acdd938d25dd8d9a9747643e66706f399727b9e"
+          }
+        },
+        {
+          "client_id": "646379856639-i83jq7e0ufi6qrpd4b1oj2idb19ptaab.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.codiano.eboro",
+            "certificate_hash": "7f42720efd4d4a79d733fc7282913ef214f4e852"
+          }
+        },
+        {
+          "client_id": "646379856639-6cetrrap6csblfffk2v8g14p46r5sqol.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCckohTrDRNs3JtFzLC-3ffaLwsXh2tGSk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "646379856639-6cetrrap6csblfffk2v8g14p46r5sqol.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "646379856639-aml1v59cmi535kga9ojqi53l84rrvldd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.codiano.eboro",
+                "app_store_id": "1626529297"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
