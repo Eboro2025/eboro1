@@ -105,22 +105,16 @@ class _AddAddressState extends State<AddAddress> {
       String lng = result.latlng.longitude.toString();
       String address = result.address;
 
-      print('DEBUG _changeAddress: START');
-
       Progress.progressDialogue(context);
 
-      print('DEBUG _changeAddress: calling editUserlocations');
       await Auth2.editUserlocations(address, lat, lng, context,
           navigate: false, showProgress: false);
-      print('DEBUG _changeAddress: editUserlocations DONE');
 
       // Clear house and intercom on server when address changes
       final mobile = Auth2.user?.mobile ?? "";
-      print('DEBUG _changeAddress: calling editUserlocationsHints with mobile=$mobile');
       await Auth2.editUserlocationsHints(mobile, "", "", context,
           whatsapp: Auth2.user?.whatsapp ?? "", navigate: false,
           showProgress: false, popOnDone: false);
-      print('DEBUG _changeAddress: editUserlocationsHints DONE');
 
       // Clear local fields
       _houseController.clear();
@@ -131,36 +125,22 @@ class _AddAddressState extends State<AddAddress> {
       // Force clear local user data
       Auth2.user?.house = "";
       Auth2.user?.intercom = "";
-      print('DEBUG _changeAddress: cleared house and intercom locally');
 
       // Clear cart when address changes
       if (mounted) {
         final cart = prov.Provider.of<CartTextProvider>(context, listen: false);
-        print('DEBUG _changeAddress: cart items=${cart.cart?.cart_items?.length ?? 0}');
-        try {
-          await cart.clearCart(context);
-          print('DEBUG _changeAddress: clearCart DONE');
-        } catch (e) {
-          print('DEBUG _changeAddress: clearCart ERROR: $e');
-        }
-      } else {
-        print('DEBUG _changeAddress: NOT mounted, skipping cart clear');
+        cart.clearCartSilent();
       }
 
       Provider2.clearProvidersCache();
       if (mounted) {
         await Auth2.getUserDetails(context);
-        print('DEBUG _changeAddress: after getUserDetails, re-clearing');
-        // Re-clear after getUserDetails in case server still has old values
         Auth2.user?.house = "";
         Auth2.user?.intercom = "";
         final providerController =
             prov.Provider.of<ProviderController>(context, listen: false);
         providerController.updateProvider(null, force: true);
         setState(() {});
-        print('DEBUG _changeAddress: COMPLETE');
-      } else {
-        print('DEBUG _changeAddress: NOT mounted after getUserDetails');
       }
     } else {
       Fluttertoast.showToast(
