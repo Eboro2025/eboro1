@@ -19,8 +19,12 @@ class VIP2 extends State<VIP> {
     // لو الليستة null نتعامل مع فاضية
     final List<ProviderData> allProviders = (provider.providers ?? []).toList();
 
-    // ترتيب حسب الحالة (المفتوح الأول)
-    allProviders.sort((a, b) => -a.state!.compareTo(b.state!));
+    // ترتيب حسب الحالة (المفتوح الأول، المقفول الآخر)
+    allProviders.sort((a, b) {
+      final aOpen = a.state == '1' ? 0 : 1;
+      final bOpen = b.state == '1' ? 0 : 1;
+      return aOpen.compareTo(bOpen);
+    });
 
     // فلترة VIP فقط والحالة مش "2"
     final List<ProviderData> vipList = allProviders

@@ -57,6 +57,24 @@ class ProviderController with ChangeNotifier {
   static const String _deliveryCacheKey = 'delivery_cache';
   static const String _deliveryLatLngKey = 'delivery_cache_latlng';
 
+  /// انتظار تحميل المحلات
+  Future<void> waitForProviders() async {
+    if (providers != null && providers!.isNotEmpty) return;
+    if (_providersCompleter != null) {
+      await _providersCompleter!.future;
+    }
+  }
+
+  /// مسح cache التوصيل (يُستدعى عند تغيير العنوان)
+  Future<void> clearDeliveryCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_deliveryCacheKey);
+      await prefs.remove(_deliveryLatLngKey);
+      print('DEBUG: Delivery cache cleared');
+    } catch (_) {}
+  }
+
   /// تحميل المزودين من الـ cache المحلي فوراً (بدون انتظار API)
   /// ما بيعمل fetch للـ delivery من الـ API - ده بيتم في Providers() بعدها
   Future<bool> loadFromCache() async {
@@ -67,11 +85,29 @@ class ProviderController with ChangeNotifier {
 
       // تحليل JSON في isolate منفصل لعدم تجميد الـ UI
       providers = await compute(_parseProvidersIsolate, cached);
-      providers!.sort((a, b) => -a.state!.compareTo(b.state!));
+      providers!.sort((a, b) {
+        final aOpen = a.state == '1' ? 0 : 1;
+        final bOpen = b.state == '1' ? 0 : 1;
+        return aOpen.compareTo(bOpen);
+      });
       filteredProviders = providers;
 
       // تحميل بيانات التوصيل من الـ cache لو العنوان ما اتغيرش
-      await _loadDeliveryFromCache();
+      final deliveryRestored = await _loadDeliveryFromCache();
+
+      // لو الكاش ما رجع بيانات توصيل (عنوان مختلف)، نخفي المحلات مؤقتاً
+      if (!deliveryRestored && providers != null) {
+        final hasLocation = Auth2.user?.activeLat != null &&
+            Auth2.user!.activeLat!.isNotEmpty &&
+            Auth2.user?.activeLong != null &&
+            Auth2.user!.activeLong!.isNotEmpty;
+        if (hasLocation) {
+          for (final p in providers!) {
+            p.outOfDeliveryRange = true;
+          }
+        }
+      }
+
       notifyListeners();
 
       return true;
@@ -104,10 +140,13 @@ class ProviderController with ChangeNotifier {
       final lat = Auth2.user?.activeLat?.toString() ?? '';
       final lng = Auth2.user?.activeLong?.toString() ?? '';
 
-      // حفظ بيانات التوصيل لكل provider
+      // حفظ بيانات التوصيل لكل provider (بما فيهم اللي خارج النطاق)
       final Map<String, dynamic> deliveryMap = {};
       for (final p in providers!) {
-        if (p.id != null && p.Delivery != null) {
+        if (p.id == null) continue;
+        if (p.outOfDeliveryRange) {
+          deliveryMap[p.id.toString()] = {'outOfRange': true};
+        } else if (p.Delivery != null) {
           deliveryMap[p.id.toString()] = {
             'shipping': p.Delivery!.shipping,
             'Tax': p.Delivery!.Tax,
@@ -161,10 +200,11 @@ class ProviderController with ChangeNotifier {
         if (data == null) continue;
 
         if (data['outOfRange'] == true) {
-          // ما نخفي المحل من الـ cache - نتجاهل outOfRange
-          continue;
+          p.outOfDeliveryRange = true;
+          restored++;
         } else {
           p.Delivery = ShippingData.fromJson(data);
+          p.outOfDeliveryRange = false;
           restored++;
         }
       }
@@ -258,16 +298,21 @@ class ProviderController with ChangeNotifier {
 
       _saveToCache(providers);
 
-      // مسح بيانات التوصيل القديمة عشان تتحسب من جديد بالعنوان الحالي
+      // مسح بيانات التوصيل القديمة - نخفي المحلات لحد ما نحسب المسافة الجديدة
       if (providers != null) {
+        final hasLocation = Auth2.user?.activeLat != null &&
+            Auth2.user!.activeLat!.isNotEmpty &&
+            Auth2.user?.activeLong != null &&
+            Auth2.user!.activeLong!.isNotEmpty;
         for (final p in providers!) {
           p.Delivery = null;
-          p.outOfDeliveryRange = false;
+          // لو عنده موقع، نخفي المحلات مؤقتاً لحد ما نحسب المسافة
+          // لو ما عنده موقع، نعرض الكل
+          p.outOfDeliveryRange = hasLocation;
         }
       }
 
       await _loadDeliveryFromCache();
-      notifyListeners();
 
       // Load delivery data in background without blocking UI
       _fetchDeliveryDataProgressively();
@@ -276,7 +321,7 @@ class ProviderController with ChangeNotifier {
       _isLoadingProviders = false;
       _providersCompleter?.complete();
       _providersCompleter = null;
-      notifyListeners();
+      notifyListeners(); // Single notify after all data is ready
     }
   }
 
@@ -295,33 +340,17 @@ class ProviderController with ChangeNotifier {
     final longVal = double.tryParse(longStr) ?? 0.0;
     if (latVal == 0.0 && longVal == 0.0) return;
 
-    // تحميل كل رسوم التوصيل بالتوازي
+    // تحميل رسوم التوصيل على دفعات عشان المحلات تظهر تدريجياً
     final toFetch = list.where((p) => p.Delivery == null && p.rawJson != null).toList();
     if (toFetch.isEmpty) return;
 
-    // أول 6 محلات فوراً (اللي ظاهرين على الشاشة) ثم الباقي
-    final firstBatch = toFetch.take(6).toList();
-    final restBatch = toFetch.skip(6).toList();
-
-    // المرحلة 1: أول 6 محلات
-    await Future.wait(firstBatch.map((p) async {
+    // دفعات أكبر (10 بدل 5) مع notify أقل لتقليل الـ flickering
+    const batchSize = 10;
+    for (var i = 0; i < toFetch.length; i += batchSize) {
       if (_deliveryFetchGeneration != currentGeneration) return;
-      try {
-        final result = await ProviderData.fetchDeliveryData(p.rawJson!);
-        if (_deliveryFetchGeneration != currentGeneration) return;
-        if (result != null) {
-          p.Delivery = result;
-          p.outOfDeliveryRange = false;
-        }
-      } catch (_) {}
-    }));
 
-    if (_deliveryFetchGeneration != currentGeneration) return;
-    notifyListeners();
-
-    // المرحلة 2: الباقي
-    if (restBatch.isNotEmpty) {
-      await Future.wait(restBatch.map((p) async {
+      final batch = toFetch.skip(i).take(batchSize).toList();
+      await Future.wait(batch.map((p) async {
         if (_deliveryFetchGeneration != currentGeneration) return;
         try {
           final result = await ProviderData.fetchDeliveryData(p.rawJson!);
@@ -329,12 +358,16 @@ class ProviderController with ChangeNotifier {
           if (result != null) {
             p.Delivery = result;
             p.outOfDeliveryRange = false;
+          } else {
+            p.outOfDeliveryRange = true;
           }
         } catch (_) {}
       }));
 
-      if (_deliveryFetchGeneration != currentGeneration) return;
-      notifyListeners();
+      // نحدث الـ UI بعد كل دفعة عشان المحلات تظهر تدريجياً
+      if (_deliveryFetchGeneration == currentGeneration) {
+        notifyListeners();
+      }
     }
 
     // حفظ بيانات التوصيل في الـ cache للتحميل الفوري لاحقاً
@@ -372,21 +405,28 @@ class ProviderController with ChangeNotifier {
       Types = results[2] as List<TypeData>?;
 
       filteredProviders?.clear();
-      providers!.sort((a, b) => -a.state!.compareTo(b.state!));
+      providers!.sort((a, b) {
+        final aOpen = a.state == '1' ? 0 : 1;
+        final bOpen = b.state == '1' ? 0 : 1;
+        return aOpen.compareTo(bOpen);
+      });
       filteredProviders = providers;
 
       Search2.type_id2.clear();
 
       _saveToCache(providers);
 
-      // مسح بيانات التوصيل القديمة عشان تتحسب من جديد بالعنوان الجديد
+      // مسح بيانات التوصيل القديمة - نخفي المحلات لحد ما نحسب المسافة الجديدة
+      final hasLocation = Auth2.user?.activeLat != null &&
+          Auth2.user!.activeLat!.isNotEmpty &&
+          Auth2.user?.activeLong != null &&
+          Auth2.user!.activeLong!.isNotEmpty;
       for (final p in providers!) {
         p.Delivery = null;
-        p.outOfDeliveryRange = false;
+        p.outOfDeliveryRange = hasLocation;
       }
 
       await _loadDeliveryFromCache();
-      notifyListeners();
 
       _fetchDeliveryDataProgressively();
       _preloadTopProducts();
@@ -394,7 +434,7 @@ class ProviderController with ChangeNotifier {
       _isLoadingProviders = false;
       _providersCompleter?.complete();
       _providersCompleter = null;
-      notifyListeners();
+      notifyListeners(); // Single notify after all data is ready
     }
   }
 

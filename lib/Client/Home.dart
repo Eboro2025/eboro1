@@ -725,7 +725,13 @@ class AccountSheet extends StatelessWidget {
               label: 'Invita un amico',
               onTap: () {
                 Navigator.pop(context);
-                Share.share('Scarica Eboro e ordina i tuoi piatti preferiti! https://play.google.com/store/apps/details?id=com.codiano.eboro');
+                final box = context.findRenderObject() as RenderBox?;
+                Share.share(
+                  'Scarica Eboro e ordina a domicilio! Usa il codice BENVENUTO per 3€ di sconto!\n\nApp Store: https://apps.apple.com/app/eboro/id6740466565\nGoogle Play: https://play.google.com/store/apps/details?id=com.codiano.eboro',
+                  sharePositionOrigin: box != null
+                      ? box.localToGlobal(Offset.zero) & box.size
+                      : Rect.fromLTWH(0, 0, 100, 100),
+                );
               },
             ),
             _accountItem(

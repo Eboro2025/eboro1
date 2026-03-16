@@ -15,6 +15,10 @@ import 'package:eboro/app_localizations.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:ui' as ui;
+import 'dart:io';
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../RealTime/Provider/CartTextProvider.dart';
@@ -31,6 +35,207 @@ class Profile extends State<MyProfile> {
   void initState() {
     super.initState();
     _loadUserData();
+  }
+
+  final GlobalKey _inviteCardKey = GlobalKey();
+
+  static const String _appStoreLink = 'https://apps.apple.com/app/eboro/id6740466565';
+  static const String _playStoreLink = 'https://play.google.com/store/apps/details?id=com.codiano.eboro';
+
+  Future<void> _shareInviteCard(BuildContext ctx) async {
+    // Show a brief overlay to render the card, capture it, then share directly
+    final overlay = Overlay.of(ctx);
+    final entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: -1000,
+        top: -1000,
+        child: RepaintBoundary(
+          key: _inviteCardKey,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 340,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [myColor, myColor.withValues(alpha: 0.85), Color(0xFFFF6B6B)],
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Logo
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset('images/icons/logo.png'),
+                  ),
+                  const SizedBox(height: 16),
+                  // Title
+                  Text(
+                    'Unisciti a Eboro!',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ordina cibo, farmacia e\nsupermercato a domicilio',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Promo badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.card_giftcard, color: myColor, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Codice: BENVENUTO',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: myColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '3€ di sconto sul primo ordine!',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Divider
+                  Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
+                  const SizedBox(height: 14),
+                  // Footer with visible links
+                  Text(
+                    'Scarica l\'app su',
+                    style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7)),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // App Store
+                      Column(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.apple, color: Colors.white, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                'App Store',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 20),
+                      // Google Play
+                      Column(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.shop, color: Colors.white, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Google Play',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+
+    try {
+      // Wait for the widget to be laid out
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final boundary = _inviteCardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        entry.remove();
+        return;
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      entry.remove();
+
+      if (byteData == null) return;
+
+      // Save to temp file
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/eboro_invite.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      // Share image + link directly
+      final box = ctx.findRenderObject() as RenderBox?;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Scarica Eboro e ordina a domicilio! Usa il codice BENVENUTO per 3€ di sconto!\n\n'
+            'App Store: $_appStoreLink\n'
+            'Google Play: $_playStoreLink',
+        sharePositionOrigin: box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : Rect.fromLTWH(0, 0, 100, 100),
+      );
+    } catch (e) {
+      entry.remove();
+      Auth2.show('Errore durante la condivisione');
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -88,53 +293,61 @@ class Profile extends State<MyProfile> {
                           offset: Offset(0, -50),
                           child: Column(
                             children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 20,
-                                      offset: Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 60,
-                                  backgroundColor: Colors.white,
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => EditProfile()),
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
                                   child: CircleAvatar(
-                                    radius: 55,
-                                    backgroundColor: Colors.grey.shade200,
-                                    child: Auth2.user!.image != null &&
-                                            Auth2.user!.image!.isNotEmpty &&
-                                            Auth2.user!.image!.trim().isNotEmpty
-                                        ? ClipOval(
-                                            child: CachedNetworkImage(
-                                              imageUrl: Auth2.user!.image!,
-                                              fit: BoxFit.cover,
-                                              width: 110,
-                                              height: 110,
-                                              placeholder: (context, url) =>
-                                                  Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  color: myColor,
-                                                  strokeWidth: 2,
+                                    radius: 60,
+                                    backgroundColor: Colors.white,
+                                    child: CircleAvatar(
+                                      radius: 55,
+                                      backgroundColor: Colors.grey.shade200,
+                                      child: Auth2.user!.image != null &&
+                                              Auth2.user!.image!.isNotEmpty &&
+                                              Auth2.user!.image!.trim().isNotEmpty
+                                          ? ClipOval(
+                                              child: CachedNetworkImage(
+                                                imageUrl: Auth2.user!.image!,
+                                                fit: BoxFit.cover,
+                                                width: 110,
+                                                height: 110,
+                                                placeholder: (context, url) =>
+                                                    Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    color: myColor,
+                                                    strokeWidth: 2,
+                                                  ),
+                                                ),
+                                                errorWidget:
+                                                    (context, url, error) => Icon(
+                                                  Icons.person,
+                                                  size: 60,
+                                                  color: Colors.grey.shade400,
                                                 ),
                                               ),
-                                              errorWidget:
-                                                  (context, url, error) => Icon(
-                                                Icons.person,
-                                                size: 60,
-                                                color: Colors.grey.shade400,
-                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.person,
+                                              size: 60,
+                                              color: Colors.grey.shade400,
                                             ),
-                                          )
-                                        : Icon(
-                                            Icons.person,
-                                            size: 60,
-                                            color: Colors.grey.shade400,
-                                          ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -462,9 +675,7 @@ class Profile extends State<MyProfile> {
           _buildMenuItem(
             icon: Icons.person_add_outlined,
             label: 'Invita un amico',
-            onTap: () {
-              Share.share('Scarica Eboro e ordina i tuoi piatti preferiti! https://play.google.com/store/apps/details?id=com.codiano.eboro');
-            },
+            onTap: () => _shareInviteCard(context),
           ),
           _buildMenuItem(
             icon: Icons.support_agent,
