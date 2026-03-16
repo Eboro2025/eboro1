@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scarica Eboro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #AD232D, #FF6B6B);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container { max-width: 400px; }
+        .logo {
+            width: 80px; height: 80px;
+            background: white;
+            border-radius: 18px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #AD232D;
+        }
+        h1 { font-size: 28px; margin-bottom: 8px; }
+        p { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
+        .btn {
+            display: inline-block;
+            background: white;
+            color: #AD232D;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 700;
+            margin: 8px;
+        }
+        .redirect-msg { font-size: 13px; opacity: 0.7; margin-top: 20px; }
+    </style>
+    <script>
+        (function () {
+            var ua = navigator.userAgent || navigator.vendor || window.opera;
+            var appStore = 'https://apps.apple.com/app/eboro/id6740466565';
+            var playStore = 'https://play.google.com/store/apps/details?id=com.codiano.eboro';
+
+            if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+                window.location.replace(appStore);
+            } else if (/android/i.test(ua)) {
+                window.location.replace(playStore);
+            }
+            // Desktop: show the page with both buttons
+        })();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">EBORO</div>
+        <h1>Scarica Eboro!</h1>
+        <p>Ordina cibo, farmacia e supermercato a domicilio</p>
+        <div>
+            <a class="btn" href="https://apps.apple.com/app/eboro/id6740466565">App Store</a>
+            <a class="btn" href="https://play.google.com/store/apps/details?id=com.codiano.eboro">Google Play</a>
+        </div>
+        <p class="redirect-msg">Reindirizzamento automatico in corso...</p>
+    </div>
+</body>
+</html>
