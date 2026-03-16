@@ -1,6 +1,7 @@
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/Helper/CartData.dart';
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -107,8 +108,8 @@ class Cart {
       requestBody['qty'] = _itemCount.toString();
       requestBody['product_id'] = id.toString();
 
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await HttpInterceptor.post(
+        myUrl,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'apiLang': MyApp2.apiLang.toString(),

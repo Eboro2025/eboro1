@@ -2,12 +2,15 @@ import 'package:eboro/Helper/FilterData.dart';
 import 'package:eboro/Helper/MealData.dart';
 import 'package:eboro/Helper/ProductData.dart';
 import 'package:eboro/Helper/ProviderData.dart';
+import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/Helper/TypeData.dart';
 import 'package:eboro/Widget/Search.dart';
 import 'package:eboro/Helper/JsonHelper.dart';
+import 'package:eboro/API/Categories.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:eboro/API/Auth.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -66,6 +69,9 @@ class Provider2 extends State<Providerr> {
       Map<String, String> body = {};
       if (categoryId != null && categoryId.toString() != 'null') {
         body['category_id'] = categoryId.toString();
+      } else if (Categories2.categories != null && Categories2.categories!.isNotEmpty) {
+        // Server requires category_id — default to first available category
+        body['category_id'] = Categories2.categories!.first.id.toString();
       }
       // Send current delivery coordinates so server calculates correct distance
       if (Auth2.user?.activeLat != null) {
@@ -74,6 +80,8 @@ class Provider2 extends State<Providerr> {
       if (Auth2.user?.activeLong != null) {
         body['long'] = Auth2.user!.activeLong!;
       }
+
+      // print('DEBUG getProviders');
 
       final response = await http
           .post(
@@ -228,10 +236,7 @@ class Provider2 extends State<Providerr> {
 
   static Future<List<FilterData>?> showFilter(i, n, context) async {
     try {
-      var myUrl = Uri(
-          scheme: 'https',
-          host: 'eboro.it',
-          path: '/api/get/Filter_types/' + i.toString(),
+      var myUrl = Uri.parse('$globalUrl/api/get/Filter_types/${i.toString()}').replace(
           queryParameters: {
             if (Search2.vType.isNotEmpty)
               'type[]': [
@@ -289,11 +294,8 @@ class Provider2 extends State<Providerr> {
   static Future<List<FilterData>?> editProduct(
       String name, String price, String id, context) async {
     try {
-      var myUrl = Uri(
-          scheme: 'https',
-          host: 'eboro.it',
-          path: '/api/edit/branch-product/' + id);
-      final response = await http.post(myUrl, headers: {
+      var myUrl = '$globalUrl/api/edit/branch-product/$id';
+      final response = await HttpInterceptor.post(myUrl, headers: {
         'apiLang': MyApp2.apiLang.toString(),
         'Accept': 'application/json',
         'Authorization': "${MyApp2.token}",

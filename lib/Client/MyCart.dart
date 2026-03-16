@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:bottom_picker/bottom_picker.dart';
 import 'package:eboro/API/Auth.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/API/Order.dart';
 import 'package:eboro/API/Provider.dart';
 import 'package:eboro/Client/Home.dart';
@@ -639,6 +640,8 @@ class MyCart2 extends State<MyCart> {
         .firstOrNull;
     final bool acceptsCash = currentProvider?.acceptsCash == true;
 
+    print('DEBUG CASH: cartProviderId=${cart.cart?.cart_items?.firstOrNull?.provider_id} currentProvider=${currentProvider?.id} name=${currentProvider?.name} accept_cash=${currentProvider?.accept_cash} acceptsCash=$acceptsCash providersCount=${provider.providers?.length}');
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: _cardDecoration(),
@@ -1051,67 +1054,144 @@ class MyCart2 extends State<MyCart> {
   }
 
   // Promo Code
+  String? _appliedCode;
+  bool _promoLoading = false;
+
   Widget _buildPromoCodeCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: _cardDecoration(),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _promoController,
-              decoration: const InputDecoration(
-                labelText: "Codice promozione",
-                border: OutlineInputBorder(),
+          Row(
+            children: [
+              Icon(Icons.discount_outlined, color: myColor, size: 20),
+              const SizedBox(width: 8),
+              Text('Codice sconto', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_appliedCode != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
               ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$_appliedCode  -${_promoDiscount.toStringAsFixed(2)} €',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.green[700]),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _appliedCode = null;
+                        _promoDiscount = 0;
+                        _promoController.clear();
+                      });
+                    },
+                    child: Icon(Icons.close, size: 18, color: Colors.grey),
+                  ),
+                ],
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _promoController,
+                    textCapitalization: TextCapitalization.characters,
+                    style: TextStyle(fontSize: 14, letterSpacing: 1),
+                    decoration: InputDecoration(
+                      hintText: 'Inserisci codice',
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: Color(0xFFF5F5F5),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide.none,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: myColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: _promoLoading ? null : _applyPromoCode,
+                    child: _promoLoading
+                        ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : Text('Applica', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-            onPressed: _applyPromoCode,
-            child: const Text(
-              "Applica",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  void _applyPromoCode() {
+  void _applyPromoCode() async {
     final code = _promoController.text.trim().toUpperCase();
-    double discount = 0.0;
+    if (code.isEmpty) return;
 
-    if (code == 'EBORO5') {
-      discount = 5.0;
-    } else if (code == 'PIZZA10') {
-      discount = 10.0;
-    } else {
-      discount = 0.0;
+    setState(() => _promoLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('$globalUrl/api/apply-coupon'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': '${MyApp2.token}',
+        },
+        body: {'code': code},
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        setState(() {
+          _promoDiscount = double.tryParse(data['data']['discount'].toString()) ?? 0;
+          _appliedCode = data['data']['code'];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${data['message']} -${_promoDiscount.toStringAsFixed(2)} €'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Codice non valido'),
+            backgroundColor: Colors.red[400],
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Codice non valido'),
-          duration: Duration(seconds: 1),
-        ),
+        const SnackBar(content: Text('Errore di connessione'), duration: Duration(seconds: 2)),
       );
     }
 
-    setState(() {
-      _promoDiscount = discount;
-    });
-
-    if (discount > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Codice applicato: -${discount.toStringAsFixed(2)} €'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
+    setState(() => _promoLoading = false);
   }
 
   // Comment card + sheet
@@ -1634,8 +1714,8 @@ class MyCart2 extends State<MyCart> {
 
       if (paymentToken != null) {
         // Send token to backend for Stripe processing
-        final response = await http.post(
-          Uri.parse('$globalUrl/api/process-google-pay'),
+        final response = await HttpInterceptor.post(
+          '$globalUrl/api/process-google-pay',
           headers: {
             'Authorization': 'Bearer ${MyApp2.token}',
             'Content-Type': 'application/json',

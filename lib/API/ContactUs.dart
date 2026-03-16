@@ -2,6 +2,7 @@ import 'package:eboro/API/Auth.dart';
 import 'package:eboro/Client/Contact%20Us/Contacts.dart';
 import 'package:eboro/Widget/Progress.dart';
 import 'package:flutter/material.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -29,7 +30,7 @@ class ContactUsAPI {
   writeContact(String email, String phone, String name, String topic, String message, context, {String? base64Image, String? fileNames}) async {
     Progress.progressDialogue(context);
     String myUrl = "$globalUrl/api/contact-us";
-    http.post(Uri.parse(myUrl), headers: {
+    HttpInterceptor.post(myUrl, headers: {
       'apiLang' : MyApp2.apiLang.toString(),
       'Accept': 'application/json',
       'Authorization': "${MyApp2.token}",

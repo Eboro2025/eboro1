@@ -1,5 +1,6 @@
 import 'package:eboro/Helper/ProductData.dart';
 import 'package:flutter/material.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -157,11 +158,8 @@ class CashierAPI2 extends State <CashierAPI> {
 
   editProducts(String name, String price, String id , String start_outofstock, String end_outofstock, context) async {
     try{
-      var myUrl = Uri(
-          scheme: 'https',
-          host: 'eboro.it',
-          path:  '/api/edit/branch-product/' + id);
-      final response = await http.post(myUrl, headers: {
+      String myUrl = '$globalUrl/api/edit/branch-product/$id';
+      final response = await HttpInterceptor.post(myUrl, headers: {
         'apiLang' : MyApp2.apiLang.toString(),
         'Accept': 'application/json',
         'Authorization': "${MyApp2.token}",

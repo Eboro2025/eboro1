@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:eboro/API/Categories.dart';
 import 'package:eboro/API/Favorite.dart';
 import 'package:eboro/API/Rates.dart';
@@ -9,7 +11,6 @@ import 'package:eboro/Auth/Signin.dart';
 import 'package:eboro/Client/Addresses.dart';
 
 import 'package:eboro/MainScreen.dart' as screens;
-import 'package:eboro/Client/Location.dart';
 
 import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
@@ -47,6 +48,39 @@ class Auth2 extends State<Auth> {
     return null;
   }
 
+  // -------------------- POST without redirect (POST→GET issue) --------------------
+  static Future<http.Response> _postNoRedirect(
+    String url, {
+    Map<String, String>? headers,
+    Map<String, String>? body,
+  }) async {
+    final request = http.Request('POST', Uri.parse(url));
+    if (headers != null) request.headers.addAll(headers);
+    if (body != null) request.bodyFields = body;
+    request.followRedirects = false;
+
+    final streamed = await request.send();
+
+    // Handle redirect: re-POST to the new location
+    if (streamed.statusCode == 301 ||
+        streamed.statusCode == 302 ||
+        streamed.statusCode == 307 ||
+        streamed.statusCode == 308) {
+      final location = streamed.headers['location'];
+      if (location != null) {
+        final redirectUrl =
+            Uri.parse(url).resolve(location).toString();
+        final r2 = http.Request('POST', Uri.parse(redirectUrl));
+        if (headers != null) r2.headers.addAll(headers);
+        if (body != null) r2.bodyFields = body;
+        r2.followRedirects = false;
+        final streamed2 = await r2.send();
+        return http.Response.fromStream(streamed2);
+      }
+    }
+    return http.Response.fromStream(streamed);
+  }
+
   // -------------------- LOGIN --------------------
   static Future<void> login(
     String email,
@@ -56,10 +90,10 @@ class Auth2 extends State<Auth> {
   }) async {
     Progress.progressDialogue(context);
     final String myUrl = "$globalUrl/api/login";
-    print('DEBUG LOGIN: calling $myUrl');
+    // print('DEBUG LOGIN: calling $myUrl');
     try {
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',
@@ -70,20 +104,19 @@ class Auth2 extends State<Auth> {
         },
       );
 
-      print('DEBUG LOGIN: status=${response.statusCode}');
-      print('DEBUG LOGIN: body=${response.body}');
+      // print('DEBUG LOGIN: status=${response.statusCode}');
 
       Map A;
       try {
         A = json.decode(response.body);
       } catch (e) {
-        print('DEBUG LOGIN: JSON decode error: $e');
-        show("Si è verificato un errore durante l'accesso");
+        // print('DEBUG LOGIN: JSON decode error: $e');
+        show("Server ${response.statusCode}: ${response.body.substring(0, response.body.length.clamp(0, 150))}");
         return;
       }
 
       if (A['errors'] != null) {
-        print('DEBUG LOGIN: errors=${A['errors']}');
+        // print('DEBUG LOGIN: errors=${A['errors']}');
         show(A['errors'].toString());
         return;
       }
@@ -91,6 +124,7 @@ class Auth2 extends State<Auth> {
       if (A['data'] != null) {
         MyApp2.prefs.setString('firstTime', "firstTime");
         MyApp2.token = "Bearer ${A["data"]["token"]}";
+        // print('DEBUG LOGIN: token set');
 
         // حفظ refresh token لو موجود
         if (A["data"]["refresh_token"] != null) {
@@ -112,10 +146,13 @@ class Auth2 extends State<Auth> {
         show(A['message'].toString());
       }
     } catch (e) {
-      print('DEBUG LOGIN: EXCEPTION: $e');
+      // print('DEBUG LOGIN: EXCEPTION: $e');
       show("Si è verificato un errore durante l'accesso");
     } finally {
-      Progress.dimesDialog(context);
+      // finally
+      if (context.mounted) {
+        Progress.dimesDialog(context);
+      }
     }
   }
 
@@ -132,8 +169,9 @@ class Auth2 extends State<Auth> {
     final String myUrl = "$globalUrl/api/login/social";
 
     try {
-      final response = await http.post(
-        Uri.parse(myUrl),
+      // print('DEBUG socialLogin');
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {'Accept': 'application/json'},
         body: {
           "email": email,
@@ -144,12 +182,28 @@ class Auth2 extends State<Auth> {
         },
       );
 
-      Map A = json.decode(response.body);
-      // print(response.body);
+      // print('DEBUG socialLogin: status=${response.statusCode}');
+
+      if (response.body.trimLeft().startsWith('<')) {
+        if (context.mounted) Progress.dimesDialog(context);
+        show('Server ${response.statusCode}: ${response.body.substring(0, response.body.length.clamp(0, 100))}');
+        return;
+      }
+
+      Map A;
+      try {
+        A = json.decode(response.body);
+      } catch (e) {
+        if (context.mounted) Progress.dimesDialog(context);
+        show("Server ${response.statusCode}: ${response.body.substring(0, response.body.length.clamp(0, 150))}");
+        return;
+      }
 
       if (A['errors'] != null) {
+        if (context.mounted) Progress.dimesDialog(context);
         show(A['errors'].toString());
       } else if (A['data'] != null) {
+        if (context.mounted) Progress.dimesDialog(context);
         MyApp2.prefs.setString('firstTime', "firstTime");
         MyApp2.prefs.setBool('gof', true);
         MyApp2.token = "Bearer ${A["data"]["token"]}";
@@ -163,15 +217,16 @@ class Auth2 extends State<Auth> {
         }
 
         await getUserDetails(context);
-       await checkType(MyApp2.token!, context);
-
+        await checkType(MyApp2.token!, context);
+      } else {
+        if (context.mounted) Progress.dimesDialog(context);
       }
 
       if (A['message'] != null) {
         show(A['message'].toString());
       }
     } catch (e) {
-      // print("Error in googlefacebooklogin: $e");
+      if (context.mounted) Progress.dimesDialog(context);
       String errorMessage =
           "Something went wrong. Please try again.\nError: $e";
       show(errorMessage);
@@ -180,8 +235,10 @@ class Auth2 extends State<Auth> {
 
   // -------------------- TOAST --------------------
   static show(String message) async {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
     FToast fToast = FToast();
-    fToast.init(navigatorKey.currentContext!);
+    fToast.init(ctx);
     fToast.showToast(
       child: Container(
         padding:
@@ -237,10 +294,12 @@ class Auth2 extends State<Auth> {
 
       if (B['code'].toString().contains('406') ||
           response.statusCode == 406) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => EmailVerification()),
-        );
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => EmailVerification()),
+          );
+        }
         return null;
       }
 
@@ -276,6 +335,8 @@ class Auth2 extends State<Auth> {
           MyApp2.prefs.setString('type', '0');
         }
 
+        if (!context.mounted) return users;
+
         // تشغيل جميع الـ API calls بالتوازي بدلاً من التتابع
         final cart =
             Provider.of<CartTextProvider>(context, listen: false);
@@ -290,14 +351,12 @@ class Auth2 extends State<Auth> {
           providerController.updateProvider(null),
         ]);
 
-        if (user != null && user?.lat != null && user?.long != null) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 0)),
-            (Route<dynamic> route) => false,
-          );
-        } else {
-          SetLocation(rout: "home");
-        }
+        if (!context.mounted) return users;
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 0)),
+          (Route<dynamic> route) => false,
+        );
       }
     } catch (e) {
       // print(e);
@@ -323,38 +382,68 @@ class Auth2 extends State<Auth> {
     Progress.progressDialogue(context);
     final String myUrl = '$globalUrl/api/register';
 
-    http
-        .post(
-      Uri.parse(myUrl),
-      headers: {
-        'apiLang': MyApp2.apiLang.toString(),
-      },
-      body: {
-        'name': name,
-        'email': email,
-        'mobile': mobile,
-        'password': password,
-        'password_confirmation': confirmation,
-        'address': address,
-        "base64Image": base64Image ?? "",
-        "fileNames": fileNames ?? "",
-        'type': '0',
-        "flag": "json",
-        'lat': lat,
-        'long': long,
-      },
-    )
-        .then((response) async {
+    try {
+      final response = await _postNoRedirect(
+        myUrl,
+        headers: {
+          'apiLang': MyApp2.apiLang.toString(),
+        },
+        body: {
+          'name': name,
+          'email': email,
+          'mobile': mobile,
+          'password': password,
+          'password_confirmation': confirmation,
+          'address': address,
+          "base64Image": base64Image ?? "",
+          "fileNames": fileNames ?? "",
+          'type': '0',
+          "flag": "json",
+          'lat': lat ?? '',
+          'long': long ?? '',
+        },
+      );
+      if (context.mounted) Progress.dimesDialog(context);
       Map? B = json.decode(response.body);
-      if (response.statusCode == 200) {
-        Progress.dimesDialog(context);
-        // Auto-login dopo la registrazione
-        await login(email, password, context);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // بعد التسجيل الناجح - autocomplete في صفحة الدخول
+        LoginScreen.email = email;
+        LoginScreen.password = password;
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => LoginScreen()),
+          (Route<dynamic> route) => false,
+        );
       } else {
-        Progress.dimesDialog(context);
-        show(B!['errors'].toString());
+        final errors = B?['errors'];
+        if (errors is Map) {
+          final messages = <String>[];
+          errors.forEach((key, value) {
+            if (value is List) {
+              for (final msg in value) {
+                String clean = msg.toString();
+                if (clean.contains('è già stato preso')) {
+                  if (key == 'email') {
+                    clean = 'Questa email è già registrata. Prova ad accedere.';
+                  } else if (key == 'mobile') {
+                    clean = 'Questo numero è già registrato.';
+                  } else {
+                    clean = 'Questo valore è già in uso.';
+                  }
+                }
+                messages.add(clean);
+              }
+            }
+          });
+          show(messages.join('\n'));
+        } else {
+          show(B?['message']?.toString() ?? 'Errore durante la registrazione');
+        }
       }
-    });
+    } catch (e) {
+      if (context.mounted) Progress.dimesDialog(context);
+      show("Errore di connessione. Riprova.");
+    }
   }
 
   // -------------------- USER DETAILS + REFRESH TOKEN --------------------
@@ -376,6 +465,7 @@ class Auth2 extends State<Auth> {
       if (response.statusCode == 200) {
         Map<String, dynamic> A =
             json.decode(response.body)['data'];
+        // Delivery fields are static on UserData — no save/restore needed
         users = UserData.fromJson(A);
         user = users;
 
@@ -383,7 +473,6 @@ class Auth2 extends State<Auth> {
             A["message"].toString().contains("Unauthenticated")) {
           deleteToken(context);
         } else if (users.lat == null && users.long == null) {
-          SetLocation(rout: "home");
           await Categories2.getCategories();
         }
       } else if (response.statusCode == 401) {
@@ -409,8 +498,8 @@ class Auth2 extends State<Auth> {
       }
 
       final String myUrl = "$globalUrl/api/refresh-token";
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',
@@ -445,9 +534,11 @@ class Auth2 extends State<Auth> {
 
   // -------------------- REMOVE TOKEN (بسيط) --------------------
   static void RemoveToken(BuildContext context) async {
+    await UserData.clearDeliveryAddress();
     SharedPreferences preferences =
         await SharedPreferences.getInstance();
     await preferences.remove('token');
+    if (!context.mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -456,6 +547,7 @@ class Auth2 extends State<Auth> {
 
   // -------------------- LOGOUT كامل --------------------
   static deleteToken(BuildContext context) async {
+    await UserData.clearDeliveryAddress();
     bool? isgof = MyApp2.prefs.getBool('gof');
     if (isgof == true) {
       try {
@@ -466,6 +558,7 @@ class Auth2 extends State<Auth> {
     MyApp2.prefs.remove('refresh_token');
     MyApp2.prefs.remove('type');
     MyApp2.prefs.remove('gof');
+    if (!context.mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -527,14 +620,19 @@ class Auth2 extends State<Auth> {
 
       if (response.statusCode == 200) {
         Map A = json.decode(response.body)['data'];
+        final savedDeliveryAddress = UserData.deliveryAddress;
+        final savedDeliveryLat = UserData.deliveryLat;
+        final savedDeliveryLong = UserData.deliveryLong;
         user = UserData.fromJson(A['user']);
-        // تأكد إن الإحداثيات اللي أرسلناها هي اللي تبقى (مش اللي رجعت من السيرفر)
+        UserData.deliveryAddress = savedDeliveryAddress;
+        UserData.deliveryLat = savedDeliveryLat;
+        UserData.deliveryLong = savedDeliveryLong;
         user?.lat = lat;
         user?.long = long;
         if (address != null && address.isNotEmpty) {
           user?.address = address;
         }
-        if (navigate) {
+        if (navigate && context.mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => AddAddress()),
@@ -545,6 +643,7 @@ class Auth2 extends State<Auth> {
     } catch (e) {
       // print(e);
     }
+    if (showProgress && context.mounted) Progress.dimesDialog(context);
     return false;
   }
 
@@ -574,17 +673,19 @@ class Auth2 extends State<Auth> {
       if (response.statusCode == 200) {
         Map A = json.decode(response.body)['data'];
         // Save delivery fields before re-parsing user
-        final savedDeliveryAddress = user?.deliveryAddress;
-        final savedDeliveryLat = user?.deliveryLat;
-        final savedDeliveryLong = user?.deliveryLong;
+        final savedDeliveryAddress = UserData.deliveryAddress;
+        final savedDeliveryLat = UserData.deliveryLat;
+        final savedDeliveryLong = UserData.deliveryLong;
+        // print('DEBUG updateDeliveryCoords');
         user = UserData.fromJson(A['user']);
-        // Restore delivery address (not in server response)
-        user?.deliveryAddress = savedDeliveryAddress;
-        user?.deliveryLat = savedDeliveryLat;
-        user?.deliveryLong = savedDeliveryLong;
+        // Restore delivery fields
+        UserData.deliveryAddress = savedDeliveryAddress;
+        UserData.deliveryLat = savedDeliveryLat;
+        UserData.deliveryLong = savedDeliveryLong;
+        // print('DEBUG updateDeliveryCoords done');
       }
     } catch (e) {
-      print('DEBUG updateDeliveryCoordinates error: $e');
+      // print('DEBUG updateDeliveryCoordinates error: $e');
     }
   }
 
@@ -595,6 +696,9 @@ class Auth2 extends State<Auth> {
     BuildContext context, {
     String cap = '',
     String whatsapp = '',
+    String whatsapp2 = '',
+    String email = '',
+    String note = '',
     bool navigate = true,
     bool showProgress = true,
     bool popOnDone = true,
@@ -602,6 +706,17 @@ class Auth2 extends State<Auth> {
     if (showProgress) Progress.progressDialogue(context);
     try {
       String myUrl = "$globalUrl/api/edit-location";
+      final body = {
+        'mobile': mobile,
+        'house': house,
+        'intercom': intercom,
+        'cap': cap,
+        'whatsapp': whatsapp,
+        if (whatsapp2.isNotEmpty) 'whatsapp2': whatsapp2,
+        if (email.isNotEmpty) 'email': email,
+        if (note.isNotEmpty) 'note': note,
+      };
+      // print('DEBUG editUserlocationsHints');
       final response = await HttpInterceptor.post(
         myUrl,
         context: context,
@@ -610,23 +725,26 @@ class Auth2 extends State<Auth> {
           'Accept': 'application/json',
           'Authorization': "${MyApp2.token}",
         },
-        body: {
-          'mobile': mobile,
-          'house': house,
-          'intercom': intercom,
-          'cap': cap,
-          'whatsapp': whatsapp,
-        },
+        body: body,
       );
+
+      // print('DEBUG editUserlocationsHints: status=${response.statusCode}');
 
       if (response.statusCode == 200) {
         Map A = json.decode(response.body)['data'];
-        // حفظ العنوان والإحداثيات الحالية قبل ما السيرفر يكتب فوقها
+        // Save ALL local state before server re-parse
         final savedAddress = user?.address;
         final savedLat = user?.lat;
         final savedLong = user?.long;
+        final savedDeliveryAddress = UserData.deliveryAddress;
+        final savedDeliveryLat = UserData.deliveryLat;
+        final savedDeliveryLong = UserData.deliveryLong;
         user = UserData.fromJson(A['user']);
-        // استعادة العنوان والإحداثيات لو السيرفر رجع قيم مختلفة
+        // Restore delivery fields
+        UserData.deliveryAddress = savedDeliveryAddress;
+        UserData.deliveryLat = savedDeliveryLat;
+        UserData.deliveryLong = savedDeliveryLong;
+        // Restore address/lat/long
         if (savedAddress != null && savedAddress.isNotEmpty) {
           user?.address = savedAddress;
         }
@@ -636,6 +754,7 @@ class Auth2 extends State<Auth> {
         if (savedLong != null && savedLong.isNotEmpty) {
           user?.long = savedLong;
         }
+        if (!context.mounted) return;
         if (navigate) {
           Navigator.pushReplacement(
             context,
@@ -646,10 +765,10 @@ class Auth2 extends State<Auth> {
           if (popOnDone) Navigator.pop(context);
         }
       } else {
-        // print("editUserlocationsHints() no data");
+        if (showProgress && context.mounted) Progress.dimesDialog(context);
       }
     } catch (e) {
-      // print(e);
+      if (showProgress && context.mounted) Progress.dimesDialog(context);
     }
   }
 
@@ -691,6 +810,68 @@ class Auth2 extends State<Auth> {
     Progress.dimesDialog(context);
   }
 
+  // -------------------- SET LOCATION FROM GPS --------------------
+  static Future<void> setLocationFromGPS() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('GPS: Location services disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        print('GPS: Permission denied');
+        return;
+      }
+
+      Position? pos = await Geolocator.getLastKnownPosition();
+      print('GPS: lastKnown = ${pos?.latitude}, ${pos?.longitude}');
+
+      if (pos == null || (pos.latitude == 0.0 && pos.longitude == 0.0)) {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 10),
+        );
+        print('GPS: currentPosition = ${pos.latitude}, ${pos.longitude}');
+      }
+
+      final lat = pos.latitude.toString();
+      final lng = pos.longitude.toString();
+
+      UserData.deliveryLat = lat;
+      UserData.deliveryLong = lng;
+      user?.lat = lat;
+      user?.long = lng;
+
+      // Reverse geocode
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          pos.latitude, pos.longitude,
+        ).timeout(const Duration(seconds: 5));
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final parts = <String>[];
+          if (p.street != null && p.street!.isNotEmpty) parts.add(p.street!);
+          if (p.locality != null && p.locality!.isNotEmpty) parts.add(p.locality!);
+          final address = parts.join(', ');
+          if (address.isNotEmpty) {
+            UserData.deliveryAddress = address;
+            print('GPS: address resolved = $address');
+          }
+        }
+      } catch (e) {
+        print('GPS: geocode error = $e');
+      }
+    } catch (e) {
+      print('GPS: error = $e');
+    }
+  }
+
   // -------------------- EDIT USER DETAILS --------------------
   static editUserDetails(
     String? name,
@@ -702,8 +883,9 @@ class Auth2 extends State<Auth> {
     String? lat,
     String? long,
     String? online, // تقدر تشيله لو خلاص مش محتاجه
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    String? codiceFiscale,
+  }) async {
     Progress.progressDialogue(context);
     final String myUrl = "$globalUrl/api/edit-profile";
 
@@ -726,6 +908,7 @@ class Auth2 extends State<Auth> {
         if (lat != null) 'lat': lat,
         if (long != null) 'long': long,
         if (online != null) 'online': online,
+        if (codiceFiscale != null) 'codice_fiscale': codiceFiscale,
       },
     );
     Map C = json.decode(response.body);
@@ -784,11 +967,11 @@ class Auth2 extends State<Auth> {
     BuildContext context,
   ) async {
     Progress.progressDialogue(context);
-    final String myUrl = "$globalUrl/api/sendResetCode";
+    final String myUrl = "$globalUrl/api/forgetPassword";
 
     try {
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',
@@ -799,13 +982,11 @@ class Auth2 extends State<Auth> {
       );
 
       Map A = json.decode(response.body);
-      // print(response.body);
 
       Progress.dimesDialog(context);
 
       if (A['status'] == 'success') {
         show(A['message'].toString());
-        // يمكنك توجيه المستخدم لصفحة إدخال الكود هنا
       } else if (A['errors'] != null) {
         show(A['errors'].toString());
       } else if (A['message'] != null) {
@@ -830,8 +1011,8 @@ class Auth2 extends State<Auth> {
     final String myUrl = "$globalUrl/api/resetPassword";
 
     try {
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',
@@ -845,7 +1026,6 @@ class Auth2 extends State<Auth> {
       );
 
       Map A = json.decode(response.body);
-      // print(response.body);
 
       Progress.dimesDialog(context);
 
@@ -877,8 +1057,8 @@ class Auth2 extends State<Auth> {
     final String myUrl = "$globalUrl/api/sendOTP";
 
     try {
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',
@@ -915,8 +1095,8 @@ class Auth2 extends State<Auth> {
     final String myUrl = "$globalUrl/api/verifyOTP";
 
     try {
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await _postNoRedirect(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',

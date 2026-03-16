@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 class UserData {
   final int? id;
   final String?name;
@@ -19,16 +21,48 @@ class UserData {
   String?whatsapp;
   final int? online;
   final String?created_at;
+  String? codice_fiscale;
+  final bool age_verified;
 
-  // Delivery address (separate from profile address)
-  String? deliveryAddress;
-  String? deliveryLat;
-  String? deliveryLong;
+  // Delivery address lives as static fields (survives user = fromJson(...) calls)
+  // Access via UserData.deliveryAddress, etc.
+  static String? deliveryAddress;
+  static String? deliveryLat;
+  static String? deliveryLong;
 
-  // Getters: use delivery address if set, otherwise fall back to profile
-  String? get activeAddress => deliveryAddress ?? address;
-  String? get activeLat => deliveryLat ?? lat;
-  String? get activeLong => deliveryLong ?? long;
+  // Getters: use ONLY delivery address (user-selected in current session), never profile address
+  String? get activeAddress => deliveryAddress;
+  String? get activeLat => deliveryLat;
+  String? get activeLong => deliveryLong;
+
+  // Save delivery address to SharedPreferences
+  static Future<void> saveDeliveryAddress() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (deliveryAddress != null) {
+      await prefs.setString('delivery_address', deliveryAddress!);
+      if (deliveryLat != null) await prefs.setString('delivery_lat', deliveryLat!);
+      if (deliveryLong != null) await prefs.setString('delivery_long', deliveryLong!);
+    }
+  }
+
+  // Load delivery address from SharedPreferences
+  static Future<void> loadDeliveryAddress() async {
+    final prefs = await SharedPreferences.getInstance();
+    deliveryAddress = prefs.getString('delivery_address');
+    deliveryLat = prefs.getString('delivery_lat');
+    deliveryLong = prefs.getString('delivery_long');
+  }
+
+  // Clear saved delivery address
+  static Future<void> clearDeliveryAddress() async {
+    deliveryAddress = null;
+    deliveryLat = null;
+    deliveryLong = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('delivery_address');
+    await prefs.remove('delivery_lat');
+    await prefs.remove('delivery_long');
+  }
 
   // VIP Business fields
   final bool? is_vip_business;
@@ -64,6 +98,8 @@ class UserData {
     this.whatsapp,
     this.online,
     this.created_at,
+    this.codice_fiscale,
+    this.age_verified = false,
     this.is_vip_business,
     this.referral_code,
     this.commission_percent,
@@ -92,6 +128,8 @@ class UserData {
       long: json['long'],
       online: json['online'],
       created_at: json['created_at'],
+      codice_fiscale: json['codice_fiscale']?.toString(),
+      age_verified: json['age_verified'] == true || json['age_verified'] == 1,
       is_vip_business: json['is_vip_business'] == true || json['is_vip_business'] == 1,
       referral_code: json['referral_code']?.toString(),
       commission_percent: double.tryParse(json['commission_percent']?.toString() ?? ''),

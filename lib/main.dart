@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:eboro/API/Auth.dart';
+import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/API/Categories.dart';
 import 'package:eboro/API/Favorite.dart';
 import 'package:eboro/API/Rates.dart';
@@ -27,9 +28,9 @@ import 'package:eboro/All/NotificationService.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // String globalUrl = "http://192.168.0.141:8000"; // Local server
-// String globalUrl = "https://eboro.it"; // Production server
+// String globalUrl = "https://partnerseboro.it"; // Test server
 // String globalUrl = "http://10.0.2.2:8000"; // Local server via emulator
-String globalUrl = "https://partnerseboro.it"; // Test server
+String globalUrl = "https://eboro.it"; // Production server
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -364,6 +365,9 @@ class MyApp2 extends State<MyHomePage> {
 
   Future<void> go() async {
     try {
+      // Always get current GPS location on app open
+      await Auth2.setLocationFromGPS();
+
       final order = Provider.of<UserOrderProvider>(context, listen: false);
       final providerController =
           Provider.of<ProviderController>(context, listen: false);

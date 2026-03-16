@@ -90,6 +90,7 @@ class MapScreenState extends State<MapScreen> {
         Uri.parse(endpoint),
       ))
           .body);
+      if (!mounted) return;
       setState(() {
         _currentAddress = response['results'][0]['formatted_address'];
 
@@ -111,9 +112,11 @@ class MapScreenState extends State<MapScreen> {
       print(e);
     }
 
-    setState(() {
-      loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
   @override
   void initState() {
@@ -177,20 +180,25 @@ class MapScreenState extends State<MapScreen> {
         headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': widget.apiKey},
         body: json.encode(body),
       );
+      print('SEARCH NEW API: status=${response.statusCode} body=${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}');
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
-        setState(() {
-          _searchResults = (data['suggestions'] as List?)
-              ?.where((s) => s['placePrediction'] != null)
-              .map((s) => s['placePrediction'])
-              .toList() ?? [];
-          _showSearchResults = _searchResults.isNotEmpty;
-        });
+        if (mounted) {
+          setState(() {
+            _searchResults = (data['suggestions'] as List?)
+                ?.where((s) => s['placePrediction'] != null)
+                .map((s) => s['placePrediction'])
+                .toList() ?? [];
+            _showSearchResults = _searchResults.isNotEmpty;
+          });
+        }
       } else {
-        _getSearchSuggestionsFallback(input);
+        print('SEARCH NEW API FAILED: ${response.statusCode}, trying fallback...');
+        if (mounted) _getSearchSuggestionsFallback(input);
       }
     } catch (e) {
-      _getSearchSuggestionsFallback(input);
+      print('SEARCH NEW API ERROR: $e, trying fallback...');
+      if (mounted) _getSearchSuggestionsFallback(input);
     }
   }
 
@@ -203,21 +211,25 @@ class MapScreenState extends State<MapScreen> {
     if (_latLng != null) {
       request += '&location=${_latLng!.latitude},${_latLng!.longitude}&radius=800000';
     }
-    request += '&types=geocode';
-    var response = await http.get(Uri.parse(request));
-    if (response.statusCode == 200) {
-      var data = json.decode(response.body);
-      setState(() {
-        _searchResults = (data['predictions'] as List?)?.map((p) => {
-          'placeId': p['place_id'],
-          'text': {'text': p['description']},
-          'structuredFormat': {
-            'mainText': {'text': p['structured_formatting']?['main_text'] ?? ''},
-            'secondaryText': {'text': p['structured_formatting']?['secondary_text'] ?? ''},
-          },
-        }).toList() ?? [];
-        _showSearchResults = _searchResults.isNotEmpty;
-      });
+    try {
+      var response = await http.get(Uri.parse(request));
+      print('SEARCH FALLBACK API: status=${response.statusCode} body=${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}');
+      if (response.statusCode == 200 && mounted) {
+        var data = json.decode(response.body);
+        setState(() {
+          _searchResults = (data['predictions'] as List?)?.map((p) => {
+            'placeId': p['place_id'],
+            'text': {'text': p['description']},
+            'structuredFormat': {
+              'mainText': {'text': p['structured_formatting']?['main_text'] ?? ''},
+              'secondaryText': {'text': p['structured_formatting']?['secondary_text'] ?? ''},
+            },
+          }).toList() ?? [];
+          _showSearchResults = _searchResults.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      print('SEARCH FALLBACK ERROR: $e');
     }
   }
 
@@ -227,16 +239,21 @@ class MapScreenState extends State<MapScreen> {
       _showSearchResults = false;
       _searchController.clear();
     });
-    final location = await getPlace(placeId);
-    CameraPosition cPosition = CameraPosition(
-      zoom: 17,
-      target: LatLng(
-        double.parse(location['lat'].toString()),
-        double.parse(location['lng'].toString()),
-      ),
-    );
-    final GoogleMapController controller = await _controller.future;
-    controller.animateCamera(CameraUpdate.newCameraPosition(cPosition));
+    try {
+      final location = await getPlace(placeId);
+      if (!mounted) return;
+      CameraPosition cPosition = CameraPosition(
+        zoom: 17,
+        target: LatLng(
+          double.parse(location['lat'].toString()),
+          double.parse(location['lng'].toString()),
+        ),
+      );
+      final GoogleMapController controller = await _controller.future;
+      controller.animateCamera(CameraUpdate.newCameraPosition(cPosition));
+    } catch (e) {
+      print('Search result tap error: $e');
+    }
   }
   @override
   Widget build(BuildContext context) {

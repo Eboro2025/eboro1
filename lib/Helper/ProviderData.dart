@@ -79,12 +79,15 @@ class ProviderData {
 
       // نستخدم الإحداثيات كـ string مباشرة للحفاظ على الدقة
       String myUrl = "$globalUrl/api/delivery-fees/${id}/${latStr}/${longStr}";
+      print('DEBUG fetchDeliveryData: provider=$id url=$myUrl');
 
       final response = await http.get(Uri.parse(myUrl), headers: {
         'apiLang': MyApp2.apiLang.toString(),
         'Accept': 'application/json',
         'Authorization': "${MyApp2.token}",
       }).timeout(const Duration(seconds: 5));
+
+      print('DEBUG fetchDeliveryData: provider=$id statusCode=${response.statusCode} body=${response.body}');
 
       if (response.statusCode == 200) {
         Map<String, dynamic> A = json.decode(response.body)
@@ -93,13 +96,16 @@ class ProviderData {
 
         // فقط نرجع بيانات التوصيل لو success=true
         bool success = A['success'] == true;
+        print('DEBUG fetchDeliveryData: provider=$id success=$success shipping=$ship');
         if (success && ship != null && ship.isNotEmpty) {
           return ShippingData.fromJson(A);
         }
       }
 
+      print('DEBUG fetchDeliveryData: provider=$id => OUT OF RANGE (returning null)');
       return null;
     } catch (e) {
+      print('DEBUG fetchDeliveryData: ERROR: $e');
       return null;
     }
   }
@@ -139,8 +145,10 @@ class ProviderData {
       user: json['user'] != null ? UserData.fromJson(json['user']) : null,
       created_at: json['created_at'],
       nextOpeningTime: json['next_opening_time'],
-      accept_cash: json['accept_cash'] == true || json['accept_cash'] == 1,
+      accept_cash: json['accept_cash'] == true || json['accept_cash'] == 1 || json['accept_cash'].toString() == '1',
     );
+
+    print('DEBUG PROVIDER PARSE: id=${json['id']} name=${json['name']} accept_cash_raw=${json['accept_cash']} type=${json['accept_cash']?.runtimeType} parsed=${provider.accept_cash} cashKeys=${json.keys.where((k) => k.toLowerCase().contains('cash') || k.toLowerCase().contains('pay')).toList()}');
 
     provider.rawJson = json;
     return provider;

@@ -8,7 +8,49 @@ class HttpInterceptor {
 
   /// الحصول على context صالح - يستخدم المعطى أو navigatorKey كبديل
   static BuildContext _getContext(BuildContext? context) {
-    return context ?? navigatorKey.currentContext!;
+    if (context != null) return context;
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) throw StateError('No valid context available');
+    return ctx;
+  }
+
+  /// POST that preserves the method on redirects (avoids POST→GET conversion)
+  static Future<http.Response> _postNoRedirect(
+    String url, {
+    Map<String, String>? headers,
+    dynamic body,
+  }) async {
+    final request = http.Request('POST', Uri.parse(url));
+    if (headers != null) request.headers.addAll(headers);
+    if (body is Map<String, String>) {
+      request.bodyFields = body;
+    } else if (body != null) {
+      request.body = body.toString();
+    }
+    request.followRedirects = false;
+
+    final streamed = await request.send();
+
+    if (streamed.statusCode == 301 ||
+        streamed.statusCode == 302 ||
+        streamed.statusCode == 307 ||
+        streamed.statusCode == 308) {
+      final location = streamed.headers['location'];
+      if (location != null) {
+        final redirectUrl = Uri.parse(url).resolve(location).toString();
+        final r2 = http.Request('POST', Uri.parse(redirectUrl));
+        if (headers != null) r2.headers.addAll(headers);
+        if (body is Map<String, String>) {
+          r2.bodyFields = body;
+        } else if (body != null) {
+          r2.body = body.toString();
+        }
+        r2.followRedirects = false;
+        final streamed2 = await r2.send();
+        return http.Response.fromStream(streamed2);
+      }
+    }
+    return http.Response.fromStream(streamed);
   }
 
   /// Realiza una petición GET con manejo automático de token expirado
@@ -25,16 +67,12 @@ class HttpInterceptor {
 
     // Si el token expiró (401), intentar refrescarlo
     if (response.statusCode == 401 && retryCount == 0) {
-      // print("Token expirado en GET $url - Intentando refrescar...");
       bool refreshed = await Auth2.refreshToken(_getContext(context));
 
       if (refreshed) {
-        // Actualizar header con nuevo token
         if (headers != null && headers.containsKey('Authorization')) {
           headers['Authorization'] = MyApp2.token!;
         }
-
-        // Reintentar la petición con el nuevo token
         return await get(url, context: context, headers: headers, retryCount: 1);
       }
     }
@@ -50,24 +88,16 @@ class HttpInterceptor {
     dynamic body,
     int retryCount = 0,
   }) async {
-    final response = await http.post(
-      Uri.parse(url),
-      headers: headers,
-      body: body,
-    );
+    final response = await _postNoRedirect(url, headers: headers, body: body);
 
     // Si el token expiró (401), intentar refrescarlo
     if (response.statusCode == 401 && retryCount == 0) {
-      // print("Token expirado en POST $url - Intentando refrescar...");
       bool refreshed = await Auth2.refreshToken(_getContext(context));
 
       if (refreshed) {
-        // Actualizar header con nuevo token
         if (headers != null && headers.containsKey('Authorization')) {
           headers['Authorization'] = MyApp2.token!;
         }
-
-        // Reintentar la petición con el nuevo token
         return await post(url, context: context, headers: headers, body: body, retryCount: 1);
       }
     }
@@ -89,18 +119,13 @@ class HttpInterceptor {
       body: body,
     );
 
-    // Si el token expiró (401), intentar refrescarlo
     if (response.statusCode == 401 && retryCount == 0) {
-      // print("Token expirado en PUT $url - Intentando refrescar...");
       bool refreshed = await Auth2.refreshToken(_getContext(context));
 
       if (refreshed) {
-        // Actualizar header con nuevo token
         if (headers != null && headers.containsKey('Authorization')) {
           headers['Authorization'] = MyApp2.token!;
         }
-
-        // Reintentar la petición con el nuevo token
         return await put(url, context: context, headers: headers, body: body, retryCount: 1);
       }
     }
@@ -120,18 +145,13 @@ class HttpInterceptor {
       headers: headers,
     );
 
-    // Si el token expiró (401), intentar refrescarlo
     if (response.statusCode == 401 && retryCount == 0) {
-      // print("Token expirado en DELETE $url - Intentando refrescar...");
       bool refreshed = await Auth2.refreshToken(_getContext(context));
 
       if (refreshed) {
-        // Actualizar header con nuevo token
         if (headers != null && headers.containsKey('Authorization')) {
           headers['Authorization'] = MyApp2.token!;
         }
-
-        // Reintentar la petición con el nuevo token
         return await delete(url, context: context, headers: headers, retryCount: 1);
       }
     }

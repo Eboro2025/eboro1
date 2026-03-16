@@ -30,7 +30,7 @@ class SignupScreen2 extends State<SignupScreen> {
 
   bool _obscureText = false;
 
-  Future<File>? file;
+  File? file;
   String? base64Image;
   String? fileNames;
   String? lat;
@@ -43,9 +43,19 @@ class SignupScreen2 extends State<SignupScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _toggle();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _addressController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   void _handleSuggestionSelected(suggestion) async {
@@ -82,7 +92,7 @@ class SignupScreen2 extends State<SignupScreen> {
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null && mounted) {
       setState(() {
-        file = File(pickedFile.path) as Future<File>?;
+        file = File(pickedFile.path);
       });
     }
   }
@@ -108,20 +118,30 @@ class SignupScreen2 extends State<SignupScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    _requestLocationPermission();
-    Position? lastPos = await Geolocator.getLastKnownPosition();
-    final position = (lastPos != null && lastPos.latitude != 0.0 && lastPos.longitude != 0.0)
-        ? lastPos
-        : await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.medium,
-            timeLimit: const Duration(seconds: 8));
-    final placemarks =
-        await placemarkFromCoordinates(position.latitude, position.longitude);
-    final address =
-        '${placemarks[0].street}, ${placemarks[0].postalCode}, ${placemarks[0].locality}, ${placemarks[0].country}';
-    _addressController.text = address;
-    lat = position.latitude.toString();
-    long = position.longitude.toString();
+    try {
+      await _requestLocationPermission();
+      Position? lastPos = await Geolocator.getLastKnownPosition();
+      final position = (lastPos != null && lastPos.latitude != 0.0 && lastPos.longitude != 0.0)
+          ? lastPos
+          : await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 8));
+      final placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      final address =
+          '${placemarks[0].street}, ${placemarks[0].postalCode}, ${placemarks[0].locality}, ${placemarks[0].country}';
+      if (mounted) {
+        setState(() {
+          _addressController.text = address;
+          lat = position.latitude.toString();
+          long = position.longitude.toString();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        Auth2.show("Impossibile ottenere la posizione. Inserisci l'indirizzo manualmente.");
+      }
+    }
   }
 
   Future<void> _requestLocationPermission() async {
@@ -145,121 +165,52 @@ class SignupScreen2 extends State<SignupScreen> {
   }
 
   Widget showImage() {
-    return FutureBuilder<File>(
-      future: file,
-      builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-        if (snapshot.connectionState == ConnectionState.done &&
-            null != snapshot.data) {
-          tmpFile = snapshot.data;
-          base64Image = base64Encode(snapshot.data!.readAsBytesSync());
-          fileNames = snapshot.data!.path.split("/").last;
-          return CircleAvatar(
-            child: CircleAvatar(
-                radius: MyApp2.W! * .145,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    image: DecorationImage(
-                      fit: BoxFit.fill,
-                      image: FileImage(snapshot.data!),
-                    ),
-                    borderRadius: BorderRadius.all(Radius.circular(200.0)),
-                  ),
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    height: MyApp2.W! * .075,
-                    width: MyApp2.W! * .075,
-                    decoration: BoxDecoration(
-                      color: myColor,
-                      borderRadius: BorderRadius.all(Radius.circular(200.0)),
-                    ),
-                    child: GestureDetector(
-                      child: Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: MyApp2.W! * .05,
-                      ),
-                      onTap: () {
-                        chooseImage();
-                      },
-                    ),
-                  ),
-                )),
-            radius: MyApp2.W! * .15,
-            backgroundColor: Colors.black12,
-          );
-        } else if (null != snapshot.error) {
-          return CircleAvatar(
-            child: CircleAvatar(
-                radius: MyApp2.W! * .145,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    image: DecorationImage(
-                      image: AssetImage('images/icons/error.png'),
-                    ),
-                    borderRadius: BorderRadius.all(Radius.circular(200.0)),
-                  ),
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    height: MyApp2.W! * .075,
-                    width: MyApp2.W! * .075,
-                    decoration: BoxDecoration(
-                      color: myColor,
-                      borderRadius: BorderRadius.all(Radius.circular(200.0)),
-                    ),
-                    child: GestureDetector(
-                      child: Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: MyApp2.W! * .05,
-                      ),
-                      onTap: () {
-                        chooseImage();
-                      },
-                    ),
-                  ),
-                )),
-            radius: MyApp2.W! * .15,
-            backgroundColor: Colors.black12,
-          );
-        } else {
-          return CircleAvatar(
-            child: CircleAvatar(
-                radius: MyApp2.W! * .145,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    image: DecorationImage(
-                      image: AssetImage('images/icons/profile.png'),
-                    ),
-                    borderRadius: BorderRadius.all(Radius.circular(200.0)),
-                  ),
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    height: MyApp2.W! * .075,
-                    width: MyApp2.W! * .075,
-                    decoration: BoxDecoration(
-                      color: myColor,
-                      borderRadius: BorderRadius.all(Radius.circular(200.0)),
-                    ),
-                    child: GestureDetector(
-                      child: Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: MyApp2.W! * .05,
-                      ),
-                      onTap: () {
-                        chooseImage();
-                      },
-                    ),
-                  ),
-                )),
-            radius: MyApp2.W! * .15,
-            backgroundColor: Colors.black12,
-          );
-        }
-      },
+    ImageProvider imageProvider;
+    if (file != null) {
+      tmpFile = file;
+      base64Image = base64Encode(file!.readAsBytesSync());
+      fileNames = file!.path.split("/").last;
+      imageProvider = FileImage(file!);
+    } else {
+      imageProvider = const AssetImage('images/icons/profile.png');
+    }
+
+    return CircleAvatar(
+      radius: MyApp2.W! * .15,
+      backgroundColor: file != null ? Colors.black12 : myColor,
+      child: CircleAvatar(
+        radius: MyApp2.W! * .145,
+        backgroundColor: Colors.white,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            image: DecorationImage(
+              fit: BoxFit.fill,
+              image: imageProvider,
+            ),
+            borderRadius: const BorderRadius.all(Radius.circular(200.0)),
+          ),
+          alignment: Alignment.bottomRight,
+          child: Container(
+            height: MyApp2.W! * .075,
+            width: MyApp2.W! * .075,
+            decoration: BoxDecoration(
+              color: myColor,
+              borderRadius: const BorderRadius.all(Radius.circular(200.0)),
+            ),
+            child: GestureDetector(
+              child: Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: MyApp2.W! * .05,
+              ),
+              onTap: () {
+                chooseImage();
+              },
+            ),
+          ),
+        ),
+      ),
     );
   }
 

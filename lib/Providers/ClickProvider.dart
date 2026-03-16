@@ -865,7 +865,10 @@ class ClickProvider2 extends State<ClickProvider>
                   label: 'Copia link',
                   color: Colors.grey[700]!,
                   onTap: () {
-                    final link = 'https://partnerseboro.it/store/${providerItem.id}';
+                    final baseUrl = globalUrl.endsWith('/')
+                        ? globalUrl.substring(0, globalUrl.length - 1)
+                        : globalUrl;
+                    final link = '$baseUrl/store/${providerItem.id}';
                     Navigator.pop(context);
                     Auth2.show('Link copiato: $link');
                   },

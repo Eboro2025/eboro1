@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 
@@ -71,15 +72,15 @@ class VideoApi {
         return data.map((v) => PromoVideo.fromJson(v)).toList();
       }
     } catch (e) {
-      // print('Error loading promo videos: $e');
+      // print('DEBUG VIDEO API ERROR: $e');
     }
     return [];
   }
 
   static Future<void> incrementView(int videoId) async {
     try {
-      await http.post(
-        Uri.parse('$globalUrl/api/videos/$videoId/view'),
+      await HttpInterceptor.post(
+        '$globalUrl/api/videos/$videoId/view',
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',
@@ -91,8 +92,8 @@ class VideoApi {
 
   static Future<Map<String, dynamic>?> toggleLike(int videoId) async {
     try {
-      final response = await http.post(
-        Uri.parse('$globalUrl/api/videos/$videoId/like'),
+      final response = await HttpInterceptor.post(
+        '$globalUrl/api/videos/$videoId/like',
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',

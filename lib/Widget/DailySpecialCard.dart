@@ -263,22 +263,30 @@ class DailySpecialCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: Colors.grey.shade200)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      if (special.delivery!.Distance != null && special.delivery!.Distance!.isNotEmpty)
-                        _deliveryChip(Icons.location_on_outlined,
-                            "${double.tryParse(special.delivery!.Distance!)?.toStringAsFixed(1) ?? special.delivery!.Distance} km"),
-                      if (special.delivery!.shipping != null && special.delivery!.shipping!.isNotEmpty)
-                        _deliveryChip(Icons.delivery_dining_outlined,
-                            "${special.delivery!.shipping} €"),
-                      if (special.delivery!.Duration != null && special.delivery!.Duration!.isNotEmpty)
-                        _deliveryChip(Icons.access_time_outlined,
-                            special.delivery!.Duration!),
-                      if (special.delivery!.OrderMin != null && special.delivery!.OrderMin!.isNotEmpty)
-                        _deliveryChip(Icons.receipt_outlined,
-                            "${special.delivery!.OrderMin} €"),
-                    ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        if (special.delivery!.Distance != null && special.delivery!.Distance!.isNotEmpty)
+                          _deliveryChip(Icons.location_on_outlined,
+                              "${double.tryParse(special.delivery!.Distance!)?.toStringAsFixed(1) ?? special.delivery!.Distance} km"),
+                        if (special.delivery!.shipping != null && special.delivery!.shipping!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _deliveryChip(Icons.delivery_dining_outlined,
+                              "${special.delivery!.shipping} €"),
+                        ],
+                        if (special.delivery!.Duration != null && special.delivery!.Duration!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _deliveryChip(Icons.access_time_outlined,
+                              special.delivery!.Duration!),
+                        ],
+                        if (special.delivery!.OrderMin != null && special.delivery!.OrderMin!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _deliveryChip(Icons.receipt_outlined,
+                              "${special.delivery!.OrderMin} €"),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
             ],

@@ -1135,11 +1135,8 @@ class ProductDetails2 extends State<ProductDetails> {
                   ),
                 Text(
                   isStoreOpen
-                      ? (AppLocalizations.of(context)!.translate("addtocart") ??
-                          "Aggiungi al carrello")
-                      : (AppLocalizations.of(context)!
-                              .translate("store_closed") ??
-                          "Negozio chiuso"),
+                      ? "Aggiungi"
+                      : "Negozio chiuso",
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,

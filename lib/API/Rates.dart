@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -46,7 +47,7 @@ class Rates2 extends State<Rates> {
 
   static rateProvider(value, comment, id, context) async {
     String myUrl = "$globalUrl/api/add-to-Rate";
-    http.post(Uri.parse(myUrl), headers: {
+    HttpInterceptor.post(myUrl, headers: {
       'apiLang': MyApp2.apiLang.toString(),
       'Accept': 'application/json',
       'Authorization': "${MyApp2.token}",

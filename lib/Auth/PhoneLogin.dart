@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'package:eboro/API/Auth.dart';
-import 'package:eboro/Auth/OTPVerification.dart';
 import 'package:eboro/app_localizations.dart';
 import 'package:eboro/main.dart';
 import 'package:eboro/package/intl_phone_field/intl_phone_field.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -18,7 +16,6 @@ class PhoneLoginScreen extends StatefulWidget {
 class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   String _fullPhone = '';
   bool _isLoading = false;
-  bool _callbackReceived = false;
 
   Future<void> _sendOTP() async {
     FocusScope.of(context).unfocus();
@@ -30,101 +27,9 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
     }
 
     setState(() => _isLoading = true);
-    _callbackReceived = false;
-    print('Sending OTP to: $_fullPhone');
-
-    // Safety timeout - stop loading after 30 seconds if no callback received
-    Future.delayed(const Duration(seconds: 30), () {
-      if (!_callbackReceived && mounted) {
-        setState(() => _isLoading = false);
-        Auth2.show(
-            'Timeout: controlla che Phone Authentication sia abilitato in Firebase Console e che SHA-1 sia configurato.');
-      }
-    });
 
     try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: _fullPhone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-verification (Android) - sign in directly
-          _callbackReceived = true;
-          print('Auto verification completed');
-          try {
-            UserCredential userCredential =
-                await FirebaseAuth.instance.signInWithCredential(credential);
-            if (userCredential.user != null) {
-              _loginToBackend(userCredential);
-            }
-          } catch (e) {
-            print('Auto sign-in error: $e');
-            if (mounted) setState(() => _isLoading = false);
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          _callbackReceived = true;
-          print('verificationFailed code: ${e.code}');
-          print('verificationFailed message: ${e.message}');
-          if (!mounted) return;
-          setState(() => _isLoading = false);
-
-          String errorMsg;
-          switch (e.code) {
-            case 'invalid-phone-number':
-              errorMsg = 'Numero di telefono non valido';
-              break;
-            case 'too-many-requests':
-              errorMsg = 'Troppe richieste. Riprova più tardi';
-              break;
-            case 'app-not-authorized':
-              errorMsg =
-                  'App non autorizzata. Abilita Phone Authentication in Firebase Console e aggiungi SHA-1';
-              break;
-            case 'missing-client-identifier':
-              errorMsg =
-                  'Configurazione mancante. Aggiungi SHA-1 e SHA-256 in Firebase Console e ricarica google-services.json';
-              break;
-            default:
-              errorMsg = '${e.message ?? "Errore"} (${e.code})';
-          }
-          Auth2.show(errorMsg);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _callbackReceived = true;
-          print('Code sent! verificationId: $verificationId');
-          if (!mounted) return;
-          setState(() => _isLoading = false);
-          Auth2.show('Codice OTP inviato');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OTPVerificationScreen(
-                phone: _fullPhone,
-                verificationId: verificationId,
-                resendToken: resendToken,
-              ),
-            ),
-          );
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _callbackReceived = true;
-          print('Auto retrieval timeout');
-          if (!mounted) return;
-          setState(() => _isLoading = false);
-        },
-      );
-    } catch (e) {
-      _callbackReceived = true;
-      print('verifyPhoneNumber exception: $e');
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      Auth2.show('Errore: $e');
-    }
-  }
-
-  Future<void> _loginToBackend(UserCredential userCredential) async {
-    try {
-      String? firebaseToken = await userCredential.user!.getIdToken();
+      // Direct phone login without OTP
       final String myUrl = '$globalUrl/api/firebase-phone-login';
       final response = await http.post(
         Uri.parse(myUrl),
@@ -133,23 +38,36 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
           'Accept': 'application/json',
         },
         body: {
-          'firebase_token': firebaseToken ?? '',
           'mobile': _fullPhone,
           'name': _fullPhone,
         },
       );
+
       if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      print('Phone login response: ${response.statusCode} ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final result = json.decode(response.body);
-        if (result['status'] == 'success' && result['data'] != null) {
+        if (result['data'] != null && result['data']['token'] != null) {
           MyApp2.prefs.setString('firstTime', 'firstTime');
           MyApp2.token = "Bearer ${result['data']['token']}";
+          print('Token set, calling getUserDetails...');
           await Auth2.getUserDetails(context);
+          print('getUserDetails done, calling checkType...');
           await Auth2.checkType(MyApp2.token!, context);
+          print('checkType done');
+        } else {
+          Auth2.show(result['message']?.toString() ?? 'Errore durante l\'accesso');
         }
+      } else {
+        Auth2.show('Errore durante l\'accesso. Riprova.');
       }
     } catch (e) {
-      print('loginToBackend error: $e');
+      print('Phone login error: $e');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      Auth2.show('Errore: $e');
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:eboro/Widget/Progress.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
 import 'package:eboro/API/Cart.dart';
+import 'package:http/http.dart' as http;
 
 class CartTextProvider with ChangeNotifier {
   CartData? cart = CartData();
@@ -58,10 +59,14 @@ class CartTextProvider with ChangeNotifier {
         }
       }
 
-      Progress.progressDialogue(navigatorKey.currentContext!);
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) return;
+      Progress.progressDialogue(ctx);
       await Cart().addToCart(extras, item, qty);
       await updateCart();
-      Progress.dimesDialog(navigatorKey.currentContext!);
+      if (navigatorKey.currentContext != null) {
+        Progress.dimesDialog(navigatorKey.currentContext!);
+      }
     } finally {
       _isProcessing = false;
     }
@@ -158,8 +163,16 @@ class CartTextProvider with ChangeNotifier {
   }
 
   /// تفريغ السلة بدون progress dialog
-  void clearCartSilent() {
+  Future<void> clearCartSilent() async {
+    try {
+      String myUrl = "$globalUrl/api/rest-cart-item/";
+      await http.get(Uri.parse(myUrl), headers: {
+        'apiLang': MyApp2.apiLang.toString(),
+        'Accept': 'application/json',
+        'Authorization': "${MyApp2.token}",
+      });
+    } catch (_) {}
     cart?.cart_items?.clear();
-    notifyListeners();
+    await updateCart();
   }
 }

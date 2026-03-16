@@ -206,6 +206,25 @@ class Order2 extends State<Order> {
           Auth2.show("Empty response from server");
           return false;
         }
+      } else if (response.statusCode == 403) {
+        // Alcohol age verification - codice fiscale required
+        String errorMsg = "Accesso negato";
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map) {
+            errorMsg = errorData['message'] ?? errorMsg;
+          }
+        } catch (_) {}
+
+        try {
+          Navigator.pop(context);
+        } catch (_) {}
+
+        // Show dialog to enter codice fiscale
+        if (context.mounted) {
+          await _showCodiceFiscaleDialog(context, errorMsg);
+        }
+        return false;
       } else if (response.statusCode == 500) {
         // محاولة استخراج رسالة الخطأ من الـ response
         String errorMsg = "Server error (500). Please try again later.";
@@ -262,6 +281,71 @@ class Order2 extends State<Order> {
       } catch (_) {} // إغلاق Progress dialog
       return false; // فشل الطلب
     }
+  }
+
+  Future<void> _showCodiceFiscaleDialog(BuildContext context, String message) async {
+    final controller = TextEditingController();
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Expanded(child: Text('Verifica Età', style: TextStyle(fontSize: 18))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message, style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+            SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              textCapitalization: TextCapitalization.characters,
+              maxLength: 16,
+              style: TextStyle(fontFamily: 'monospace', fontSize: 16),
+              decoration: InputDecoration(
+                labelText: 'Codice Fiscale',
+                hintText: 'RSSMRA85M01H501Z',
+                counterText: '',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Annulla'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: myColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              final cf = controller.text.trim().toUpperCase();
+              if (cf.length != 16) {
+                Auth2.show('Il Codice Fiscale deve essere di 16 caratteri');
+                return;
+              }
+              Navigator.pop(ctx);
+              // Save codice fiscale via API
+              await Auth2.editUserDetails(
+                null, null, null, null, null, null, null, null, null,
+                context,
+                codiceFiscale: cf,
+              );
+              Auth2.show('Codice Fiscale salvato. Riprova l\'ordine.');
+            },
+            child: Text('Salva', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<List<OrderData>?> getOrders([id = null, branch_id = null]) async {

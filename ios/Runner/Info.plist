@@ -83,5 +83,23 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Abbiamo bisogno della fotocamera per scattare foto del profilo e dei prodotti.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Abbiamo bisogno di accedere alla galleria per caricare foto del profilo e dei prodotti.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Abbiamo bisogno del microfono per registrare video.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Necessario per la connessione con la stampante.</string>
+	<key>NSPrefPaneIconFile</key>
+	<string></string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array/>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
+	<key>NSContactsUsageDescription</key>
+	<string>uso per carcre foto  si ci rimborso</string>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
 </dict>
 </plist>

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:eboro/API/Auth.dart';
+import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/API/Provider.dart';
 import 'package:eboro/Client/Addresses.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
@@ -29,13 +30,16 @@ class SetLocation2 extends State<SetLocation> {
   SetLocation2(this.index);
   late AddressResult selectedPlace;
   static String? ship, tax, address, duration;
-  static LatLng userPosition = LatLng(double.parse("${Auth2.user?.activeLat ?? Auth2.user?.lat ?? 0}"),
-      double.parse("${Auth2.user?.activeLong ?? Auth2.user?.long ?? 0}"));
+  static LatLng userPosition = LatLng(
+      double.tryParse(Auth2.user?.activeLat ?? Auth2.user?.lat ?? '') ?? 45.4642,
+      double.tryParse(Auth2.user?.activeLong ?? Auth2.user?.long ?? '') ?? 9.1900);
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    if (widget.rout == null) {
+      authenticate();
+    }
   }
 
   static authenticate() async {
@@ -78,9 +82,6 @@ class SetLocation2 extends State<SetLocation> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.rout == null) {
-      authenticate();
-    }
     return Column(
       children: [
         GestureDetector(
@@ -123,7 +124,7 @@ class SetLocation2 extends State<SetLocation> {
               String lng = selectedPlace.latlng.longitude.toString();
               String address = selectedPlace.address;
               // Your existing logic for handling the picked location
-              if (Auth2.user!.email != "info@eboro.com") {
+              if (Auth2.user?.email != "info@eboro.com") {
                 if (widget.rout != null) {
                   if (Provider2.provider != null) {
                     Provider2.provider!.clear();
@@ -131,10 +132,11 @@ class SetLocation2 extends State<SetLocation> {
                   // Update delivery address locally (don't overwrite profile address)
                   setState(() {
                     userPosition = selectedPlace.latlng;
-                    Auth2.user!.deliveryAddress = address;
-                    Auth2.user!.deliveryLat = lat;
-                    Auth2.user!.deliveryLong = lng;
+                    UserData.deliveryAddress = address;
+                    UserData.deliveryLat = lat;
+                    UserData.deliveryLong = lng;
                   });
+                  UserData.saveDeliveryAddress();
                   // Update only coordinates on server for distance/shipping calculation
                   Auth2.updateDeliveryCoordinates(lat, lng, context);
 
@@ -148,9 +150,9 @@ class SetLocation2 extends State<SetLocation> {
                       whatsapp: Auth2.user?.whatsapp ?? "", navigate: false,
                       showProgress: false, popOnDone: false);
 
-                  // Clear cart (fire and forget)
+                  // Clear cart
                   final cart = prov.Provider.of<CartTextProvider>(context, listen: false);
-                  cart.clearCartSilent();
+                  await cart.clearCartSilent();
 
                   // Clear cache and reload providers with new coordinates
                   Provider2.clearProvidersCache();

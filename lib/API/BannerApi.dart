@@ -1,4 +1,5 @@
 import 'package:eboro/Helper/BannerData.dart';
+import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -58,8 +59,8 @@ class BannerApi {
   static Future<bool> updateBannerProviders(int bannerId, List<int> providerIds) async {
     try {
       String myUrl = "$globalUrl/api/banners/$bannerId/providers";
-      final response = await http.post(
-        Uri.parse(myUrl),
+      final response = await HttpInterceptor.post(
+        myUrl,
         headers: {
           'apiLang': MyApp2.apiLang.toString(),
           'Accept': 'application/json',

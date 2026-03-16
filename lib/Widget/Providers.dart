@@ -14,7 +14,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:eboro/Helper/UserData.dart';
+import 'package:eboro/package/lib/src/map.dart';
+import 'package:eboro/package/lib/src/address_result.dart';
 import '../API/Auth.dart';
+import '../API/Provider.dart';
 import '../RealTime/Provider/CartTextProvider.dart';
 import '../RealTime/Provider/ProductCacheProvider.dart';
 import '../main.dart' show globalUrl;
@@ -29,7 +34,8 @@ import 'package:eboro/API/Offer.dart';
 import 'package:eboro/Helper/DailySpecialData.dart';
 
 class Providers extends StatefulWidget {
-  const Providers({Key? key}) : super(key: key);
+  final VoidCallback? onSelectLocation;
+  Providers({Key? key, this.onSelectLocation}) : super(key: key);
 
   @override
   Providers2 createState() => Providers2();
@@ -398,25 +404,31 @@ class Providers2 extends State<Providers> {
       _lastProviderListLength = providerList.length;
       _cachedChosenForYou =
           (List<ProviderData>.from(providerList)..shuffle()).take(6).toList();
+      // Closed stores go to the end
+      _cachedChosenForYou!.sort((a, b) {
+        final aOpen = a.state == '1' ? 0 : 1;
+        final bOpen = b.state == '1' ? 0 : 1;
+        return aOpen.compareTo(bOpen);
+      });
     }
     return _cachedChosenForYou!;
   }
 
   Widget _buildContent(ProviderController provider, CartTextProvider cart,
       List<ProviderData> sourceList) {
-    // Count providers with delivery data (to detect delivery updates)
-    final deliveryCount = sourceList
-        .where((e) => e.Delivery != null || e.outOfDeliveryRange)
+    // Count in-range providers (to detect when delivery data arrives and shows new stores)
+    final inRangeCount = sourceList
+        .where((e) => !e.outOfDeliveryRange)
         .length;
 
-    // Recalculate if provider count, filter, or delivery data changed
+    // Recalculate if provider count, filter, or in-range count changed
     if (_cachedFilteredList == null ||
         _lastComputedSourceLength != sourceList.length ||
         _lastComputedFilterIndex != selectedFilter ||
-        _lastComputedDeliveryCount != deliveryCount) {
+        _lastComputedDeliveryCount != inRangeCount) {
       _lastComputedSourceLength = sourceList.length;
       _lastComputedFilterIndex = selectedFilter;
-      _lastComputedDeliveryCount = deliveryCount;
+      _lastComputedDeliveryCount = inRangeCount;
 
       // If the user has no location set, show all providers without delivery filtering
       final hasValidLocation = _userHasValidLocation();
@@ -428,13 +440,15 @@ class Providers2 extends State<Providers> {
         // No location -> show all providers
         _cachedFilteredList = activeList;
       } else {
-        // Has location -> filter out of range providers
-        final inRange = activeList.where((e) => !e.outOfDeliveryRange).toList();
-        // If all providers are out of range, show them all instead of hiding them all
-        _cachedFilteredList = inRange.isNotEmpty ? inRange : activeList;
+        // Has location -> show only in-range providers
+        _cachedFilteredList = activeList.where((e) => !e.outOfDeliveryRange).toList();
       }
 
       _cachedFilteredList!.sort((a, b) {
+        // Closed stores (state != '1') always go to the end
+        final aOpen = a.state == '1' ? 0 : 1;
+        final bOpen = b.state == '1' ? 0 : 1;
+        if (aOpen != bOpen) return aOpen.compareTo(bOpen);
         final dA = double.tryParse(a.Delivery?.Distance ?? '') ?? 999.0;
         final dB = double.tryParse(b.Delivery?.Distance ?? '') ?? 999.0;
         return dA.compareTo(dB);
@@ -456,6 +470,10 @@ class Providers2 extends State<Providers> {
 
       _cachedPopularList = List<ProviderData>.from(_cachedFilteredList!);
       _cachedPopularList!.sort((a, b) {
+        // Closed stores always go to the end
+        final aOpen = a.state == '1' ? 0 : 1;
+        final bOpen = b.state == '1' ? 0 : 1;
+        if (aOpen != bOpen) return aOpen.compareTo(bOpen);
         final rateA = double.tryParse(a.rateRatio?.toString() ?? '0') ?? 0;
         final rateB = double.tryParse(b.rateRatio?.toString() ?? '0') ?? 0;
         return rateB.compareTo(rateA);
@@ -491,6 +509,12 @@ class Providers2 extends State<Providers> {
     }
 
     final bool hasActiveFilter = _selectedFilterKey.isNotEmpty;
+    final bool hasLocation = _userHasValidLocation();
+
+    // No location set → show only map to pick location (clean page)
+    if (!hasLocation) {
+      return _buildSelectLocationCard();
+    }
 
     return ListView(
       controller: _scrollController,
@@ -546,17 +570,19 @@ class Providers2 extends State<Providers> {
 
           // Show filtered providers as vertical list
           if (providerList.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Text(
-                _getFilterTitle(_selectedFilterKey),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+            // Don't repeat title if daily special banner already shows it
+            if (_selectedFilterKey != 'piatto_giorno')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Text(
+                  _getFilterTitle(_selectedFilterKey),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
-            ),
             ...providerList.map((eProvider) => ProviderCard(
                   eProvider: eProvider,
                   providerController: provider,
@@ -581,7 +607,9 @@ class Providers2 extends State<Providers> {
               key: _bannerSectionKey,
               child: _buildBannerProvidersSection(
                 title: provider.bannerTitle ?? "Dal Banner",
-                providers: provider.bannerProviders!,
+                providers: _userHasValidLocation()
+                    ? provider.bannerProviders!.where((e) => !e.outOfDeliveryRange).toList()
+                    : provider.bannerProviders!,
                 providerController: provider,
                 cart: cart,
               ),
@@ -593,16 +621,6 @@ class Providers2 extends State<Providers> {
               title: "Premium",
               emoji: "\uD83D\uDC8E",
               providers: premiumProviders,
-              providerController: provider,
-              cart: cart,
-            ),
-
-          // Section 1.5: Piatto del Giorno (Daily Special)
-          if (dailySpecialProviders.isNotEmpty)
-            _buildHorizontalSection(
-              title: "Piatto del Giorno",
-              emoji: "\uD83C\uDF7D\uFE0F",
-              providers: dailySpecialProviders,
               providerController: provider,
               cart: cart,
             ),
@@ -667,7 +685,142 @@ class Providers2 extends State<Providers> {
                   buildOfferText: _buildOfferText,
                 )),
           ],
+
+          // No providers message
+          if (providerList.isEmpty && !provider.isLoading)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.storefront_outlined, size: 56, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Nessun ristorante nella tua zona',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black87),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Prova a cambiare la posizione per trovare ristoranti vicini a te.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500, height: 1.4),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
         ],
+      ],
+    );
+  }
+
+  // ------------------ SELECT LOCATION CARD ------------------
+  Widget _buildSelectLocationCard() {
+    return Column(
+      children: [
+        // Live Google Map
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          height: 350,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(45.4642, 9.1900), // Milano default
+                    zoom: 12,
+                  ),
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: true,
+                  mapToolbarEnabled: false,
+                  onTap: (_) => widget.onSelectLocation?.call(),
+                ),
+                // Pin in center
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 36),
+                        child: Icon(Icons.location_on, color: Colors.red, size: 48),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Text and button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              const Text(
+                'Dove vuoi ricevere il tuo ordine?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF2E3333),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Seleziona la tua posizione per vedere i ristoranti disponibili nella tua zona.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: widget.onSelectLocation,
+                  icon: const Icon(Icons.location_on, size: 20),
+                  label: const Text(
+                    'Seleziona posizione',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: myColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -866,11 +1019,7 @@ class Providers2 extends State<Providers> {
     // If all are out of range, show them all instead of hiding them
     final hasLoc = _userHasValidLocation();
     final filteredSpecials = hasLoc
-        ? (() {
-            final inRange =
-                _dailySpecials.where((s) => !s.outOfDeliveryRange).toList();
-            return inRange.isNotEmpty ? inRange : _dailySpecials.toList();
-          })()
+        ? _dailySpecials.where((s) => !s.outOfDeliveryRange).toList()
         : _dailySpecials.toList();
 
     if (filteredSpecials.isEmpty) return const SizedBox.shrink();

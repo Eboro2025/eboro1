@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eboro/API/VideoApi.dart';
 import 'package:eboro/Providers/ClickProvider.dart';
+import 'package:eboro/RealTime/Provider/ProviderController.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
@@ -24,6 +26,7 @@ class MyVideo extends StatefulWidget {
 
 class _MyVideoState extends State<MyVideo> {
   List<VideoData> _videos = [];
+  List<VideoData> _allVideos = []; // unfiltered list from API
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMsg = '';
@@ -37,19 +40,34 @@ class _MyVideoState extends State<MyVideo> {
   final Set<int> _failedIndices = {};
   bool _isMuted = false;
 
+  late final ProviderController _providerCtrl;
+
   @override
   void initState() {
     super.initState();
+    _providerCtrl = context.read<ProviderController>();
     _loadVideos();
     widget.isVisible?.addListener(_onVisibilityChanged);
+    _providerCtrl.addListener(_onProvidersChanged);
   }
 
   @override
   void dispose() {
     widget.isVisible?.removeListener(_onVisibilityChanged);
+    _providerCtrl.removeListener(_onProvidersChanged);
     _pageController.dispose();
     _disposeAllControllers();
     super.dispose();
+  }
+
+  void _onProvidersChanged() {
+    if (_allVideos.isEmpty || !mounted) return;
+    _refilterVideos();
+  }
+
+  void _refilterVideos() {
+    if (_allVideos.isEmpty || !mounted) return;
+    _applyFilter();
   }
 
   void _onVisibilityChanged() {
@@ -75,19 +93,27 @@ class _MyVideoState extends State<MyVideo> {
     });
 
     try {
-      final videos = await VideoApi.getPromoVideos(order: orderToUse);
-      if (!mounted) return;
-      setState(() {
-        _videos = videos;
-        _isLoading = false;
-        _hasError = videos.isEmpty;
-        if (videos.isEmpty) {
-          _errorMsg = 'Nessun video disponibile';
-        }
-      });
-      if (_videos.isNotEmpty) {
-        _initController(0);
+      // Wait for providers to load first (max 5 seconds)
+      if (_providerCtrl.providers == null || _providerCtrl.providers!.isEmpty) {
+        await Future.any([
+          _providerCtrl.waitForProviders(),
+          Future.delayed(const Duration(seconds: 5)),
+        ]);
       }
+
+      // Wait for delivery data (max 5 seconds)
+      for (int i = 0; i < 10; i++) {
+        if (!mounted) return;
+        if (_providerCtrl.providers?.any((p) => p.Delivery != null) == true) break;
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      if (!mounted) return;
+
+      _allVideos = await VideoApi.getPromoVideos(order: orderToUse);
+      if (!mounted) return;
+
+      _applyFilter();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -95,6 +121,36 @@ class _MyVideoState extends State<MyVideo> {
         _hasError = true;
         _errorMsg = 'Error: $e';
       });
+    }
+  }
+
+  void _applyFilter() {
+    final providerList = _providerCtrl.providers;
+    List<VideoData> videos;
+    if (providerList != null && providerList.isNotEmpty) {
+      final inRangeIds = providerList
+          .where((p) => !p.outOfDeliveryRange)
+          .map((p) => p.id)
+          .toSet();
+      print('DEBUG VIDEO filter: inRangeIds=$inRangeIds');
+      videos = _allVideos
+          .where((v) => inRangeIds.contains(v.providerId))
+          .toList();
+    } else {
+      // No providers loaded - show nothing instead of all
+      videos = [];
+    }
+
+    setState(() {
+      _videos = videos;
+      _isLoading = false;
+      _hasError = videos.isEmpty;
+      if (videos.isEmpty) {
+        _errorMsg = 'Nessun video disponibile';
+      }
+    });
+    if (_videos.isNotEmpty) {
+      _initController(0);
     }
   }
 
@@ -118,7 +174,7 @@ class _MyVideoState extends State<MyVideo> {
     final controller = VideoPlayerController.network(url);
     _controllers[index] = controller;
 
-    controller.initialize().then((_) {
+    controller.initialize().timeout(const Duration(seconds: 15)).then((_) {
       if (!mounted) return;
       _initializedIndices.add(index);
       _failedIndices.remove(index);
@@ -128,6 +184,7 @@ class _MyVideoState extends State<MyVideo> {
       if (index == _currentPage && (widget.isVisible?.value ?? true)) {
         controller.play();
       }
+      print('VIDEO INIT SUCCESS [$index]: ${controller.value.duration}');
       if (mounted) setState(() {});
     }).catchError((e) {
       print('VIDEO INIT ERROR [$index]: $e  URL: $url');
@@ -678,7 +735,13 @@ class _MyVideoState extends State<MyVideo> {
         ..writeln(video.description ?? '')
         ..writeln('')
         ..writeln('Guarda su Eboro!');
-      await Share.share(message.toString());
+      final box = context.findRenderObject() as RenderBox?;
+      await Share.share(
+        message.toString(),
+        sharePositionOrigin: box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : Rect.fromLTWH(0, 0, 100, 100),
+      );
     } catch (e) {
       // Share failed silently
     }

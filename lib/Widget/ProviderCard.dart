@@ -131,10 +131,6 @@ class ProviderCard extends StatelessWidget {
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          memCacheHeight: 650,
-                          memCacheWidth: 1200,
-                          maxHeightDiskCache: 900,
-                          maxWidthDiskCache: 1600,
                           progressIndicatorBuilder:
                               (context, url, downloadProgress) => Center(
                             child: SizedBox(

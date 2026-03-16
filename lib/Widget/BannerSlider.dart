@@ -87,7 +87,7 @@ class _BannerSliderState extends State<BannerSlider> {
       final bannerProviderIds = banner.allProviderIds;
 
       final filteredProviders = allProviders.where((p) {
-        return p.id != null && bannerProviderIds.contains(p.id);
+        return p.id != null && bannerProviderIds.contains(p.id) && !p.outOfDeliveryRange;
       }).toList();
 
       if (filteredProviders.length == 1) {

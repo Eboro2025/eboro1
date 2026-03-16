@@ -7,6 +7,7 @@ import 'package:eboro/API/Auth.dart';
 import 'package:eboro/API/Provider.dart';
 
 import 'package:eboro/Helper/ProviderData.dart';
+import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/Widget/Search.dart';
 import 'package:eboro/Widget/Providers.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
@@ -42,8 +43,7 @@ class AllProviders extends StatefulWidget {
   AllProvidersState createState() => AllProvidersState();
 }
 
-class AllProvidersState extends State<AllProviders>
-    with SingleTickerProviderStateMixin {
+class AllProvidersState extends State<AllProviders> {
   String? _selectedCategoryName;
   String? _selectedCategoryIdStr;
 
@@ -61,26 +61,24 @@ class AllProvidersState extends State<AllProviders>
   // Audio player for notifications
   final AudioPlayer _notificationPlayer = AudioPlayer();
 
-  // Animation for pulsing effect
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+  // Pulsing animation removed — was causing 60 rebuilds/sec across all pages
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize animation for pulsing effect
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
     // Pre-fetch GPS position in background so it's ready when bottom sheet opens
     _prefetchGpsPosition();
+
+    // Show location picker only if no delivery address is saved
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final addr = UserData.deliveryAddress;
+        if (addr == null || addr.isEmpty) {
+          _autoDetectAndConfirmLocation();
+        }
+      }
+    });
 
     Future.microtask(() async {
       if (!mounted) return;
@@ -121,7 +119,6 @@ class AllProvidersState extends State<AllProviders>
   @override
   void dispose() {
     _notificationPlayer.dispose(); // Clean up audio player
-    _pulseController.dispose(); // Clean up animation controller
     super.dispose();
   }
 
@@ -144,13 +141,14 @@ class AllProvidersState extends State<AllProviders>
     final houseNumber = (p.subThoroughfare ?? '').trim();
     final cap = (p.postalCode ?? '').trim();
     final city = (p.locality ?? '').trim();
-    final country = (p.country ?? '').trim();
 
-    final streetWithNumber = [street, houseNumber]
-        .where((value) => value.isNotEmpty)
-        .join(' ');
+    // Avoid duplicating house number if street already ends with it
+    String streetWithNumber = street;
+    if (houseNumber.isNotEmpty && !street.endsWith(houseNumber)) {
+      streetWithNumber = '$street $houseNumber';
+    }
 
-    return [streetWithNumber, cap, city, country]
+    return [streetWithNumber, cap, city]
         .where((value) => value.isNotEmpty)
         .join(', ');
   }
@@ -223,8 +221,13 @@ class AllProvidersState extends State<AllProviders>
   }
 
   // ===================== ADDRESS HISTORY =====================
-  static const String _addressHistoryKey = 'address_history';
   static const int _maxHistoryItems = 4;
+
+  /// Key per user account
+  String get _addressHistoryKey {
+    final userId = Auth2.user?.id?.toString() ?? 'guest';
+    return 'address_history_$userId';
+  }
 
   /// Load saved address history from SharedPreferences
   List<Map<String, String>> _loadAddressHistory() {
@@ -236,7 +239,20 @@ class AllProvidersState extends State<AllProviders>
         e.map((k, v) => MapEntry(k, v.toString()))
       ).toList();
 
-      final cleanedHistory = history.where((item) {
+      final cleanedHistory = history.map((item) {
+        // Fix duplicated house numbers (e.g. "Via X 4 4 20159" → "Via X 4, 20159")
+        var addr = item['address'] ?? '';
+        addr = addr.replaceAllMapped(
+          RegExp(r'(\d+)\s+\1(?=\s|,|$)'),
+          (m) => m.group(1)!,
+        );
+        // Fix duplicated "N XX" patterns (e.g. "4 N 04 4 N 04" → "4 N 04")
+        addr = addr.replaceAllMapped(
+          RegExp(r'(.+?N\s*\d+)\s+\1'),
+          (m) => m.group(1)!,
+        );
+        return {...item, 'address': addr};
+      }).where((item) {
         final address = (item['address'] ?? '').trim().toLowerCase();
         if (address.isEmpty) return false;
         if (address.contains('via lario')) return false;
@@ -275,15 +291,31 @@ class AllProvidersState extends State<AllProviders>
   Future<void> _selectSavedAddress(Map<String, String> addr) async {
     Progress.progressDialogue(context);
     try {
-      Auth2.user!.deliveryAddress = addr['address'];
-      Auth2.user!.deliveryLat = addr['lat'];
-      Auth2.user!.deliveryLong = addr['lng'];
+      UserData.deliveryAddress = addr['address'];
+      UserData.deliveryLat = addr['lat'];
+      UserData.deliveryLong = addr['lng'];
+      UserData.saveDeliveryAddress();
+
       // Update coordinates on server for distance/shipping calculation
       await Auth2.updateDeliveryCoordinates(addr['lat']!, addr['lng']!, context);
       if (!mounted) return;
       Progress.dimesDialog(context);
+
+      // Clear house/intercom
+      Auth2.user?.house = "";
+      Auth2.user?.intercom = "";
+      final mobile = Auth2.user?.mobile ?? "";
+      Auth2.editUserlocationsHints(mobile, "", "", context,
+          whatsapp: Auth2.user?.whatsapp ?? "", navigate: false,
+          showProgress: false, popOnDone: false);
+
+      // Clear cart (fire and forget - don't block UI)
+      final cart = Provider.of<CartTextProvider>(context, listen: false);
+      cart.clearCartSilent();
+
       Provider2.clearProvidersCache();
       final provider = Provider.of<ProviderController>(context, listen: false);
+      await provider.clearDeliveryCache();
       await provider.updateProvider(_selectedCategoryIdStr, force: true);
       if (mounted) setState(() {});
     } catch (_) {
@@ -294,24 +326,25 @@ class AllProvidersState extends State<AllProviders>
   Future<void> _openLocationPicker() async {
     if (!mounted) return;
     try {
+      // Try to get permission but don't block if denied
       try {
         var permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
           permission = await Geolocator.requestPermission();
         }
-        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
       } catch (_) {}
 
       if (!mounted) return;
 
-      // Get position with fallback
+      // Get position with fallback - always open the map even without GPS
       LatLng myPosition;
       try {
         myPosition = await _getCurrentLocation();
       } catch (_) {
+        // Fallback: use saved user location or default to Milan
         myPosition = LatLng(
-          double.tryParse(Auth2.user?.lat ?? '') ?? 45.4642,
-          double.tryParse(Auth2.user?.long ?? '') ?? 9.1900,
+          double.tryParse(Auth2.user?.activeLat ?? Auth2.user?.lat ?? '') ?? 45.4642,
+          double.tryParse(Auth2.user?.activeLong ?? Auth2.user?.long ?? '') ?? 9.1900,
         );
       }
 
@@ -337,11 +370,16 @@ class AllProvidersState extends State<AllProviders>
 
       if (result == null || !mounted) return;
 
+      // Check if address actually changed
+      final oldAddress = UserData.deliveryAddress ?? '';
+      final addressChanged = oldAddress != result.address;
+
       setState(() {
-        Auth2.user!.deliveryAddress = result.address;
-        Auth2.user!.deliveryLat = result.latlng.latitude.toString();
-        Auth2.user!.deliveryLong = result.latlng.longitude.toString();
+        UserData.deliveryAddress = result.address;
+        UserData.deliveryLat = result.latlng.latitude.toString();
+        UserData.deliveryLong = result.latlng.longitude.toString();
       });
+      UserData.saveDeliveryAddress();
 
       // Save to address history
       _saveToAddressHistory(
@@ -350,9 +388,23 @@ class AllProvidersState extends State<AllProviders>
         result.latlng.longitude.toString(),
       );
 
+      // Only clear house/intercom and cart when address actually changed
+      if (addressChanged) {
+        Auth2.user?.house = "";
+        Auth2.user?.intercom = "";
+        final mobile = Auth2.user?.mobile ?? "";
+        Auth2.editUserlocationsHints(mobile, "", "", context,
+            whatsapp: Auth2.user?.whatsapp ?? "", navigate: false,
+            showProgress: false, popOnDone: false);
+
+        final cartProvider = Provider.of<CartTextProvider>(context, listen: false);
+        cartProvider.clearCartSilent();
+      }
+
       // Update server coordinates and reload providers in parallel
       Provider2.clearProvidersCache();
       final provider = Provider.of<ProviderController>(context, listen: false);
+      await provider.clearDeliveryCache();
       await Future.wait<dynamic>([
         Auth2.updateDeliveryCoordinates(
           result.latlng.latitude.toString(),
@@ -364,7 +416,8 @@ class AllProvidersState extends State<AllProviders>
 
       if (!mounted) return;
 
-      if (Auth2.user!.email != "info@eboro.com") {
+      // Show AddAddress only on first time or when address changed
+      if (addressChanged && Auth2.user!.email != "info@eboro.com") {
         final houseEmpty =
             Auth2.user?.house == null || Auth2.user!.house!.isEmpty;
         final mobileEmpty =
@@ -759,33 +812,122 @@ class AllProvidersState extends State<AllProviders>
       return true;
     }).toList();
 
-    // Sort by selected option
-    switch (_sortBy) {
-      case 'distance':
-        filtered.sort((a, b) {
+    // Sort by selected option — closed stores always at the end
+    filtered.sort((a, b) {
+      final aOpen = a.state == '1' ? 0 : 1;
+      final bOpen = b.state == '1' ? 0 : 1;
+      if (aOpen != bOpen) return aOpen.compareTo(bOpen);
+
+      switch (_sortBy) {
+        case 'distance':
           final dA = double.tryParse(a.Delivery?.Distance ?? '') ?? 999;
           final dB = double.tryParse(b.Delivery?.Distance ?? '') ?? 999;
           return dA.compareTo(dB);
-        });
-        break;
-      case 'price':
-        filtered.sort((a, b) {
+        case 'price':
           final pA = double.tryParse(a.Delivery?.shipping ?? '') ?? 999;
           final pB = double.tryParse(b.Delivery?.shipping ?? '') ?? 999;
           return pA.compareTo(pB);
-        });
-        break;
-      case 'rating':
-        filtered.sort((a, b) {
+        case 'rating':
           final rA = double.tryParse(a.rateRatio ?? '0') ?? 0;
           final rB = double.tryParse(b.rateRatio ?? '0') ?? 0;
           return rB.compareTo(rA);
-        });
-        break;
-    }
+        default:
+          return 0;
+      }
+    });
 
     provider.filteredProviders = filtered;
     setState(() {});
+  }
+
+  Future<void> _autoDetectAndConfirmLocation() async {
+    try {
+      // Use saved delivery address if available, otherwise try GPS
+      LatLng myPosition;
+      final savedLat = double.tryParse(UserData.deliveryLat ?? '');
+      final savedLng = double.tryParse(UserData.deliveryLong ?? '');
+
+      if (savedLat != null && savedLng != null && savedLat != 0.0 && savedLng != 0.0) {
+        // Returning user - start on their last saved address
+        myPosition = LatLng(savedLat, savedLng);
+      } else {
+        // New user - try GPS
+        try {
+          var permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+          if (permission == LocationPermission.denied ||
+              permission == LocationPermission.deniedForever) {
+            if (mounted) _showLocationOptions();
+            return;
+          }
+          myPosition = await _getCurrentLocation();
+        } catch (_) {
+          myPosition = LatLng(
+            double.tryParse(Auth2.user?.activeLat ?? Auth2.user?.lat ?? '') ?? 45.4642,
+            double.tryParse(Auth2.user?.activeLong ?? Auth2.user?.long ?? '') ?? 9.1900,
+          );
+        }
+      }
+
+      if (!mounted) return;
+
+      // Open interactive map picker with live map, autocomplete & zoom
+      final result = await showGoogleMapLocationPicker(
+        pinWidget: Icon(Icons.location_pin, color: myColor, size: 50),
+        pinColor: myColor,
+        context: context,
+        addressPlaceHolder: "Seleziona qui",
+        addressTitle: "Indirizzo : ",
+        apiKey: "AIzaSyAB9JpHw1iVlBH3izJJfsuPGKOqxLsXSpk",
+        appBarTitle: "Dove vuoi ricevere il tuo ordine?",
+        confirmButtonColor: myColor,
+        confirmButtonText: "Conferma",
+        confirmButtonTextColor: Colors.white,
+        country: "it",
+        language: MyApp2.apiLang.toString(),
+        searchHint: "Cerca indirizzo...",
+        initialLocation: myPosition,
+        myLocation: myPosition,
+      );
+
+      if (result == null || !mounted) return;
+
+      // Save the selected address
+      UserData.deliveryAddress = result.address;
+      UserData.deliveryLat = result.latlng.latitude.toString();
+      UserData.deliveryLong = result.latlng.longitude.toString();
+      UserData.saveDeliveryAddress();
+
+      Auth2.user?.lat = result.latlng.latitude.toString();
+      Auth2.user?.long = result.latlng.longitude.toString();
+      _gpsAddress = result.address;
+
+      _saveToAddressHistory(
+        result.address,
+        result.latlng.latitude.toString(),
+        result.latlng.longitude.toString(),
+      );
+
+      // Update server coordinates
+      Auth2.updateDeliveryCoordinates(
+        result.latlng.latitude.toString(),
+        result.latlng.longitude.toString(),
+        context,
+      );
+
+      // Reload providers with new location
+      Provider2.clearProvidersCache();
+      final provider = Provider.of<ProviderController>(context, listen: false);
+      await provider.clearDeliveryCache();
+      await provider.updateProvider(_selectedCategoryIdStr, force: true);
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      // GPS failed - fallback to manual selection
+      if (mounted) _showLocationOptions();
+    }
   }
 
   void _showLocationOptions() {
@@ -849,6 +991,34 @@ class AllProvidersState extends State<AllProviders>
                         ? null
                         : () async {
                             Navigator.pop(ctx);
+                            // Check GPS permission first
+                            try {
+                              var permission = await Geolocator.checkPermission();
+                              if (permission == LocationPermission.denied) {
+                                permission = await Geolocator.requestPermission();
+                              }
+                              if (permission == LocationPermission.deniedForever) {
+                                if (!mounted) return;
+                                // Show dialog to open settings
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Permesso posizione'),
+                                    content: const Text('Per usare la tua posizione, abilita il permesso nelle impostazioni.'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annulla')),
+                                      TextButton(
+                                        onPressed: () { Navigator.pop(ctx); Geolocator.openAppSettings(); },
+                                        child: const Text('Apri Impostazioni'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                return;
+                              }
+                              if (permission == LocationPermission.denied) return;
+                            } catch (_) {}
+                            if (!mounted) return;
                             Progress.progressDialogue(context);
                             try {
                               // Always fetch a fresh GPS position when user taps current location
@@ -884,22 +1054,35 @@ class AllProvidersState extends State<AllProviders>
                               }
 
                               _gpsAddress = resolvedAddress;
-                              Auth2.user!.deliveryAddress = resolvedAddress;
-                              Auth2.user!.deliveryLat = pos.latitude.toString();
-                              Auth2.user!.deliveryLong = pos.longitude.toString();
+                              UserData.deliveryAddress = resolvedAddress;
+                              UserData.deliveryLat = pos.latitude.toString();
+                              UserData.deliveryLong = pos.longitude.toString();
 
                               _saveToAddressHistory(
                                 resolvedAddress,
                                 pos.latitude.toString(),
                                 pos.longitude.toString(),
                               );
+                              // Clear house/intercom
+                              Auth2.user?.house = "";
+                              Auth2.user?.intercom = "";
+                              final mobile = Auth2.user?.mobile ?? "";
+                              Auth2.editUserlocationsHints(mobile, "", "", context,
+                                  whatsapp: Auth2.user?.whatsapp ?? "", navigate: false,
+                                  showProgress: false, popOnDone: false);
+
                               // Update coordinates on server for distance/shipping
                               await Auth2.updateDeliveryCoordinates(
                                 pos.latitude.toString(), pos.longitude.toString(), context);
                               if (!mounted) return;
                               Progress.dimesDialog(context);
+
+                              // Clear cart (fire and forget - don't block UI)
+                              final cartProv = Provider.of<CartTextProvider>(context, listen: false);
+                              cartProv.clearCartSilent();
                               Provider2.clearProvidersCache();
                               final provider = Provider.of<ProviderController>(context, listen: false);
+                              await provider.clearDeliveryCache();
                               await provider.updateProvider(_selectedCategoryIdStr, force: true);
                               if (mounted) setState(() {});
                             } catch (_) {
@@ -1011,10 +1194,25 @@ class AllProvidersState extends State<AllProviders>
 
   // ============================= BUILD ==============================
 
+  bool get _hasDeliveryLocation {
+    final addr = UserData.deliveryAddress;
+    return addr != null && addr.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     final fullAddress = Auth2.user!.activeAddress ?? "Select location";
     final shortAddress = extractStreetOnly(fullAddress);
+
+    // No location → clean page with only map
+    if (!_hasDeliveryLocation) {
+      return SafeArea(
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF5F6FA),
+          body: Providers(onSelectLocation: _showLocationOptions),
+        ),
+      );
+    }
 
     return SafeArea(
       child: Scaffold(
@@ -1069,65 +1267,60 @@ class AllProvidersState extends State<AllProviders>
                 final itemCount = cart.cart?.cart_items?.fold<int>(0, (sum, item) => sum + (item.qty ?? 0)) ?? 0;
 
                 if (hasItems) {
-                  return AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => MyCart()),
-                          );
-                        },
-                        child: Container(
-                          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: myColor,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: myColor.withOpacity(0.4 * _pulseAnimation.value),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.shopping_cart,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              SizedBox(width: 6),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '$itemCount',
-                                  style: TextStyle(
-                                    color: myColor,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                            ],
-                          ),
-                        ),
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => MyCart()),
                       );
                     },
+                    child: Container(
+                      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: myColor,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: myColor.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.shopping_cart,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          SizedBox(width: 6),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$itemCount',
+                              style: TextStyle(
+                                color: myColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }
 
@@ -1202,12 +1395,12 @@ class AllProvidersState extends State<AllProviders>
           ),
         ),
 
-        body: const Column(
+        body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Lista ristoranti
             Expanded(
-              child: Providers(),
+              child: Providers(onSelectLocation: _showLocationOptions),
             ),
           ],
         ),

@@ -29,14 +29,17 @@ class LoginScreen extends StatefulWidget {
   _LoginScreenState createState() => _LoginScreenState();
   static String email = "";
   static String password = "";
+  static bool autoLogin = false;
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscureText = true;
   bool _rememberMe = false;
   bool _showEmailLogin = false;
+  bool _showForgotPassword = false;
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
+  TextEditingController _resetEmailController = TextEditingController();
   late AddressResult selectedPlace;
   final _storage = FlutterSecureStorage();
 
@@ -46,7 +49,34 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadSavedCredentials();
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _resetEmailController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSavedCredentials() async {
+    // أولوية للبيانات من التسجيل الجديد
+    if (LoginScreen.email.isNotEmpty) {
+      final email = LoginScreen.email;
+      final password = LoginScreen.password;
+      LoginScreen.email = "";
+      LoginScreen.password = "";
+
+      if (mounted) {
+        setState(() {
+          _emailController.text = email;
+          if (password.isNotEmpty) {
+            _passwordController.text = password;
+          }
+          _showEmailLogin = true;
+        });
+      }
+      return;
+    }
+
     final remember = await _storage.read(key: 'remember_me');
     if (remember == 'true') {
       final savedEmail = await _storage.read(key: 'saved_email') ?? '';
@@ -58,14 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text = savedPassword;
         });
       }
-    } else if (LoginScreen.email.isNotEmpty) {
-      _emailController.text = LoginScreen.email;
-      if (LoginScreen.password.isNotEmpty) {
-        _passwordController.text = LoginScreen.password;
-      }
-      _showEmailLogin = true;
-      LoginScreen.email = "";
-      LoginScreen.password = "";
     }
   }
 
@@ -489,8 +511,104 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _showForgotPassword = true;
+                            _resetEmailController.text = _emailController.text;
+                          });
+                        },
+                        child: Text(
+                          'Password dimenticata?',
+                          style: TextStyle(
+                            fontSize: MyApp2.fontSize14 ?? 14,
+                            color: myColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ],
+                  ),
+
+                  // Forgot password inline field
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: _showForgotPassword
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F5FA),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _resetEmailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      cursorColor: myColor,
+                                      style: TextStyle(
+                                        fontSize: MyApp2.fontSize16 ?? 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF1D1D35),
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: 'Email per reset password',
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: (MyApp2.fontSize14 ?? 14),
+                                        ),
+                                        prefixIcon: Padding(
+                                          padding: const EdgeInsets.only(left: 16, right: 12),
+                                          child: Icon(Icons.email_outlined, color: myColor, size: 22),
+                                        ),
+                                        prefixIconConstraints: const BoxConstraints(minWidth: 48),
+                                        border: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                                      ),
+                                    ),
+                                  ),
+                                  // Close button
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() => _showForgotPassword = false);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: Icon(Icons.close, color: Colors.grey[400], size: 20),
+                                    ),
+                                  ),
+                                  // Send arrow button
+                                  GestureDetector(
+                                    onTap: () async {
+                                      if (_resetEmailController.text.isEmpty) {
+                                        Auth2.show('Inserisci la tua email');
+                                        return;
+                                      }
+                                      await Auth2.sendResetCode(_resetEmailController.text, context);
+                                      setState(() {
+                                        _emailController.text = _resetEmailController.text;
+                                        _showForgotPassword = false;
+                                      });
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: myColor,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
 
                   const SizedBox(height: 24),
@@ -698,7 +816,9 @@ class _LoginScreenState extends State<LoginScreen> {
           clientId: "646379856639-aml1v59cmi535kga9ojqi53l84rrvldd.apps.googleusercontent.com",
         );
       } else {
-        await googleSignIn.initialize();
+        await googleSignIn.initialize(
+          serverClientId: "646379856639-6cetrrap6csblfffk2v8g14p46r5sqol.apps.googleusercontent.com",
+        );
       }
       final currentUser = await googleSignIn.authenticate(scopeHint: ['email']);
       if (!mounted) return;
@@ -799,6 +919,7 @@ class _LoginScreenState extends State<LoginScreen> {
         AppleIdRequest(requestedScopes: [Scope.email, Scope.fullName]),
       ]);
 
+      // print('DEBUG APPLE: result.status=${result.status}');
       switch (result.status) {
         case AuthorizationStatus.authorized:
           final AppleIdCredential credential = result.credential!;
@@ -808,6 +929,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
           final savedEmail = email != null ? email : await loadFromStorage('apple_email');
           final savedName = fullName.isNotEmpty ? fullName : await loadFromStorage('apple_fullname');
+
+          // print('DEBUG APPLE');
 
           if (email != null) await saveToStorage('apple_email', email);
           if (fullName.isNotEmpty) await saveToStorage('apple_fullname', fullName);
@@ -887,8 +1010,9 @@ class _LoginScreenState extends State<LoginScreen> {
           break;
       }
     } catch (e) {
+      // print('DEBUG APPLE ERROR: $e');
       Fluttertoast.showToast(
-        msg: 'Errore accesso Apple. Serve un account Apple Developer a pagamento.',
+        msg: 'Errore accesso Apple: $e',
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.CENTER,
         backgroundColor: Colors.red,
@@ -976,10 +1100,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> sendAppleSignInDetailsToServer(AppleIdCredential credential) async {
     final response = await http.post(
-      Uri(
-        scheme: 'https',
-        host: 'eboro.it',
-        path: '/login/apple',
+      Uri.parse('$globalUrl/login/apple').replace(
         queryParameters: <String, String?>{
           'code': credential.identityToken.toString(),
           if (credential.email != null) "firstname": credential.email,
@@ -1000,3 +1121,4 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
 }
+

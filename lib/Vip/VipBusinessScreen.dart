@@ -319,9 +319,13 @@ class _VipBusinessScreenState extends State<VipBusinessScreen>
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
+                          final box = context.findRenderObject() as RenderBox?;
                           // ignore: deprecated_member_use
                           Share.share(
                             '${AppLocalizations.of(context)?.translate('vip_share_text') ?? 'Ordina su Eboro con il mio link!'}\n$_referralUrl',
+                            sharePositionOrigin: box != null
+                                ? box.localToGlobal(Offset.zero) & box.size
+                                : Rect.fromLTWH(0, 0, 100, 100),
                           );
                         },
                         icon: const Icon(Icons.share, size: 18),

@@ -6,7 +6,6 @@ import 'package:eboro/Client/Home.dart';
 import 'package:eboro/app_localizations.dart';
 import 'package:eboro/main.dart';
 import 'package:eboro/package/intl_phone_field/intl_phone_field.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -21,14 +20,8 @@ class Edit extends State<EditProfile> {
   TextEditingController _nameController = new TextEditingController();
   TextEditingController _emailController = new TextEditingController();
   TextEditingController _phoneController = new TextEditingController();
-  TextEditingController _oldPasswordController = new TextEditingController();
-  TextEditingController _newPasswordController = new TextEditingController();
-  TextEditingController _confirmNewPasswordController =
-      new TextEditingController();
   TextEditingController _addressController = new TextEditingController();
-
-  bool _obscureText = false;
-  bool _obscureText2 = false;
+  TextEditingController _codiceFiscaleController = new TextEditingController();
 
   Future<File?>? fileT;
   String? base64Image;
@@ -37,26 +30,12 @@ class Edit extends State<EditProfile> {
 
   @override
   void initState() {
-    // TODO: implement initState
     _nameController.text = Auth2.user!.name!;
     _emailController.text = Auth2.user!.email!;
     _phoneController.text = Auth2.user!.mobile!;
     _addressController.text = Auth2.user!.address!;
-    _toggle();
-    _toggle2();
+    _codiceFiscaleController.text = Auth2.user!.codice_fiscale ?? '';
     super.initState();
-  }
-
-  void _toggle() {
-    setState(() {
-      _obscureText = !_obscureText;
-    });
-  }
-
-  void _toggle2() {
-    setState(() {
-      _obscureText2 = !_obscureText2;
-    });
   }
 
   Future<File?> chooseImage() async {
@@ -155,6 +134,124 @@ class Edit extends State<EditProfile> {
     );
   }
 
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      readOnly: readOnly,
+      style: TextStyle(fontSize: 15, color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
+        prefixIcon: Icon(icon, color: myColor, size: 20),
+        contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        filled: true,
+        fillColor: Color(0xFFF9F9F9),
+        border: OutlineInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: myColor, width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+    );
+  }
+
+  void _showChangePasswordSheet(BuildContext context) {
+    final oldPass = TextEditingController();
+    final newPass = TextEditingController();
+    final confirmPass = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 24, right: 24, top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Cambia Password',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: myColor)),
+            SizedBox(height: 20),
+            TextField(
+              controller: oldPass,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.translate("oldpassword"),
+                prefixIcon: Icon(Icons.lock_outline, color: myColor, size: 20),
+                filled: true, fillColor: Color(0xFFF9F9F9),
+                border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: newPass,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.translate("newpassword"),
+                prefixIcon: Icon(Icons.lock_reset, color: myColor, size: 20),
+                filled: true, fillColor: Color(0xFFF9F9F9),
+                border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: confirmPass,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.translate("confirmpassword"),
+                prefixIcon: Icon(Icons.lock_reset, color: myColor, size: 20),
+                filled: true, fillColor: Color(0xFFF9F9F9),
+                border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: myColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                onPressed: () async {
+                  if (oldPass.text.isEmpty || newPass.text.isEmpty) {
+                    Auth2.show('Compila tutti i campi');
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  await Auth2.changePassword(
+                    oldPass.text, newPass.text, confirmPass.text, context);
+                },
+                child: Text('Salva', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
+            ),
+            SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,377 +260,216 @@ class Edit extends State<EditProfile> {
         backgroundColor: myColor,
         centerTitle: true,
         title: Text(
-            AppLocalizations.of(context)!.translate("editmyprofile") + "s",
-            style: TextStyle(color: Colors.white, fontSize: MyApp2.H! * .03)),
+            AppLocalizations.of(context)!.translate("editmyprofile"),
+            style: TextStyle(color: Colors.white, fontSize: MyApp2.H! * .025)),
         iconTheme: new IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: <Widget>[
-            Container(
-              padding:
-                  const EdgeInsets.only(left: 30, right: 30, top: 0, bottom: 0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  SizedBox(height: MyApp2.W! * .045),
-                  Container(
-                    child: CircleAvatar(
-                      child: CircleAvatar(
-                        radius: MyApp2.W! * 0.145,
-                        child: Container(
-                          child: showImage(),
-                        ),
-                        backgroundColor: Colors.white,
-                      ),
-                      radius: MyApp2.W! * .15,
-                      backgroundColor: myColor,
-                    ),
-                  ),
-                  SizedBox(
-                    height: MyApp2.W! * .05,
-                  ),
-                  Container(
-                    child: TextField(
-                      controller: _nameController,
-                      keyboardType: TextInputType.name,
-                      style: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Colors.grey,
-                      ),
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(context)!.translate("name"),
-                        hintStyle: TextStyle(
-                          fontSize: MyApp2.fontSize16,
-                          color: Colors.grey,
-                        ),
-                        contentPadding: new EdgeInsets.symmetric(
-                            vertical: MyApp2.W! * .025,
-                            horizontal: MyApp2.W! * .025),
-                        border: OutlineInputBorder(
-                          borderSide:
-                              BorderSide(color: Colors.grey, width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: MyApp2.W! * .025,
-                  ),
-                  Container(
-                    child: TextFormField(
-                      controller: _emailController,
-                      style: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Colors.grey,
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(context)!.translate("email"),
-                        hintStyle: TextStyle(
-                          fontSize: MyApp2.fontSize16,
-                          color: Colors.grey,
-                        ),
-                        contentPadding: new EdgeInsets.symmetric(
-                            vertical: MyApp2.W! * .025,
-                            horizontal: MyApp2.W! * .025),
-                        border: OutlineInputBorder(
-                          borderSide:
-                              BorderSide(color: Colors.grey, width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: MyApp2.W! * .025,
-                  ),
-                  IntlPhoneField(
-                    disableLengthCheck: true,
-                    decoration: InputDecoration(
-                      // counterText: '',
-                      labelText: AppLocalizations.of(context)!
-                          .translate("mobilenumber"),
-                      labelStyle: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Color(0xFFCBCBCB),
-                      ),
-                      contentPadding:
-                          new EdgeInsets.symmetric(horizontal: MyApp2.W! * .06),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey, width: 0.5),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                    ),
-                    initialCountryCode: 'IT',
-                    languageCode: "it",
-                    initialValue: _phoneController.text,
-                    onChanged: (phone) {
-                      _phoneController.text = phone.completeNumber;
-                    },
-                  ),
-                  /* Container(
-                    child: TextField(
-                      controller: _phoneController,
-                      style: TextStyle(fontSize: MyApp2.fontSize16, color: Colors.grey, ),
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context).translate("mobilenumber"),
-                        hintStyle:TextStyle(fontSize: MyApp2.fontSize16, color: Colors.grey, ),
-                        contentPadding: new EdgeInsets.symmetric(vertical: MyApp2.W *.025, horizontal: MyApp2.W *.025),
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey, width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),*/
-
-                  SizedBox(
-                    height: MyApp2.W! * .025,
-                  ),
-                  Container(
-                    child: TextField(
-                      controller: _addressController,
-                      style: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Colors.grey,
-                      ),
-                      keyboardType: TextInputType.streetAddress,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(context)!.translate("address"),
-                        hintStyle: TextStyle(
-                          fontSize: MyApp2.fontSize16,
-                          color: Colors.grey,
-                        ),
-                        contentPadding: new EdgeInsets.symmetric(
-                            vertical: MyApp2.W! * .025,
-                            horizontal: MyApp2.W! * .025),
-                        border: OutlineInputBorder(
-                          borderSide:
-                              BorderSide(color: Colors.grey, width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: MyApp2.W! * .025,
-                  ),
-                  Container(
-                      child: TextField(
-                    controller: _oldPasswordController,
-                    style: TextStyle(
-                      fontSize: MyApp2.fontSize16,
-                      color: Colors.grey,
-                    ),
-                    obscureText: _obscureText,
-                    decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context)!
-                          .translate("oldpassword"),
-                      suffixIcon: Padding(
-                        padding: EdgeInsetsDirectional.only(end: 12.0),
-                        child: GestureDetector(
-                          child: _obscureText2
-                              ? Icon(
-                                  FontAwesomeIcons.eye,
-                                  color: Colors.grey,
-                                  size: MyApp2.fontSize16,
-                                )
-                              : Icon(
-                                  FontAwesomeIcons.eyeSlash,
-                                  color: myColor,
-                                  size: MyApp2.fontSize16,
-                                ),
-                          onTap: () {
-                            _toggle();
-                          },
-                        ),
-                      ),
-                      hintStyle: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Colors.grey,
-                      ),
-                      contentPadding: new EdgeInsets.symmetric(
-                          vertical: MyApp2.W! * .025,
-                          horizontal: MyApp2.W! * .025),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey, width: 0.5),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                    ),
-                  )),
-                  SizedBox(
-                    height: MyApp2.W! * .025,
-                  ),
-                  Container(
-                    child: TextField(
-                      controller: _newPasswordController,
-                      obscureText: _obscureText2,
-                      style: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Colors.grey,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!
-                            .translate("newpassword"),
-                        suffixIcon: Padding(
-                          padding: EdgeInsetsDirectional.only(end: 12.0),
-                          child: GestureDetector(
-                            child: _obscureText2
-                                ? Icon(
-                                    FontAwesomeIcons.eye,
-                                    color: Colors.grey,
-                                    size: MyApp2.fontSize16,
-                                  )
-                                : Icon(
-                                    FontAwesomeIcons.eyeSlash,
-                                    color: myColor,
-                                    size: MyApp2.fontSize16,
-                                  ),
-                            onTap: () {
-                              _toggle2();
-                            },
-                          ),
-                        ),
-                        hintStyle: TextStyle(
-                          fontSize: MyApp2.fontSize16,
-                          color: Colors.grey,
-                        ),
-                        contentPadding: new EdgeInsets.symmetric(
-                            vertical: MyApp2.W! * .025,
-                            horizontal: MyApp2.W! * .025),
-                        border: OutlineInputBorder(
-                          borderSide:
-                              BorderSide(color: Colors.grey, width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: MyApp2.W! * .025,
-                  ),
-                  Container(
-                    child: TextField(
-                      controller: _confirmNewPasswordController,
-                      obscureText: _obscureText2,
-                      style: TextStyle(
-                        fontSize: MyApp2.fontSize16,
-                        color: Colors.grey,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!
-                            .translate("confirmpassword"),
-                        suffixIcon: Padding(
-                          padding: EdgeInsetsDirectional.only(end: 12.0),
-                          child: GestureDetector(
-                            child: _obscureText2
-                                ? Icon(
-                                    FontAwesomeIcons.eye,
-                                    color: Colors.grey,
-                                    size: MyApp2.fontSize16,
-                                  )
-                                : Icon(
-                                    FontAwesomeIcons.eyeSlash,
-                                    color: myColor,
-                                    size: MyApp2.fontSize16,
-                                  ),
-                            onTap: () {
-                              _toggle2();
-                            },
-                          ),
-                        ),
-                        hintStyle: TextStyle(
-                          fontSize: MyApp2.fontSize16,
-                          color: Colors.grey,
-                        ),
-                        contentPadding: new EdgeInsets.symmetric(
-                            vertical: MyApp2.W! * .025,
-                            horizontal: MyApp2.W! * .025),
-                        border: OutlineInputBorder(
-                          borderSide:
-                              BorderSide(color: Colors.grey, width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: MyApp2.W! * .045),
-                  Container(
-                      width: MyApp2.W! * .5,
-                      child: MaterialButton(
-                        padding: const EdgeInsets.only(top: 12.5, bottom: 12.5),
-                        child: Text(
-                          AppLocalizations.of(context)!.translate("save"),
-                          style: TextStyle(
-                            fontSize: MyApp2.W! * .05,
-                          ),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        color: myColor,
-                        textColor: Colors.white,
-                        onPressed: () async {
-                          if (_oldPasswordController.text.isNotEmpty) {
-                            await Auth2.changePassword(
-                                _oldPasswordController.text,
-                                _newPasswordController.text,
-                                _confirmNewPasswordController.text,
-                                context);
-                          }
-
-                          // Geocode address if it changed
-                          String? lat;
-                          String? lng;
-                          if (_addressController.text != Auth2.user!.address) {
-                            try {
-                              final query = Uri.encodeComponent(_addressController.text);
-                              final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1';
-                              final response = await http.get(
-                                Uri.parse(url),
-                                headers: {'User-Agent': 'Eboro/1.0'},
-                              ).timeout(const Duration(seconds: 5));
-                              if (response.statusCode == 200) {
-                                final results = json.decode(response.body);
-                                if (results.isNotEmpty) {
-                                  lat = results[0]['lat'];
-                                  lng = results[0]['lon'];
-                                }
-                              }
-                            } catch (_) {}
-                          }
-
-                          await Auth2.editUserDetails(
-                              _nameController.text,
-                              _emailController.text,
-                              _phoneController.text,
-                              _addressController.text,
-                              base64Image,
-                              fileNames,
-                              null,
-                              null,
-                              null,
-                              context);
-                          // Update lat/long locally after save
-                          if (lat != null && lng != null) {
-                            Auth2.user?.lat = lat;
-                            Auth2.user?.long = lng;
-                          }
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                        },
-                      )),
-                  SizedBox(height: MyApp2.W! * .045),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              SizedBox(height: 20),
+              // Profile Image
+              CircleAvatar(
+                child: CircleAvatar(
+                  radius: MyApp2.W! * 0.145,
+                  child: showImage(),
+                  backgroundColor: Colors.white,
+                ),
+                radius: MyApp2.W! * .15,
+                backgroundColor: myColor,
               ),
-            ),
-          ],
+              SizedBox(height: 24),
+
+              // Name
+              _buildField(
+                controller: _nameController,
+                label: AppLocalizations.of(context)!.translate("name"),
+                icon: Icons.person_outline,
+                keyboardType: TextInputType.name,
+              ),
+              SizedBox(height: 12),
+
+              // Email
+              _buildField(
+                controller: _emailController,
+                label: AppLocalizations.of(context)!.translate("email"),
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              SizedBox(height: 12),
+
+              // Phone
+              IntlPhoneField(
+                disableLengthCheck: true,
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.translate("mobilenumber"),
+                  labelStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                  filled: true,
+                  fillColor: Color(0xFFF9F9F9),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: myColor, width: 1.5),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                initialCountryCode: 'IT',
+                languageCode: "it",
+                initialValue: _phoneController.text,
+                onChanged: (phone) {
+                  _phoneController.text = phone.completeNumber;
+                },
+              ),
+              SizedBox(height: 2),
+
+              // Address
+              _buildField(
+                controller: _addressController,
+                label: AppLocalizations.of(context)!.translate("address"),
+                icon: Icons.location_on_outlined,
+                keyboardType: TextInputType.streetAddress,
+              ),
+              SizedBox(height: 12),
+
+              // Codice Fiscale
+              TextField(
+                controller: _codiceFiscaleController,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 16,
+                keyboardType: TextInputType.text,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.black87,
+                  letterSpacing: 1.2,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Codice Fiscale',
+                  labelStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  hintText: 'RSSMRA85M01H501Z',
+                  hintStyle: TextStyle(fontSize: 14, color: Color(0xFFCCCCCC), letterSpacing: 1.2),
+                  counterText: '',
+                  prefixIcon: Icon(Icons.badge_outlined, color: myColor, size: 20),
+                  contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  filled: true,
+                  fillColor: Color(0xFFF9F9F9),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: myColor, width: 1.5),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 12),
+
+              // Change Password Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  icon: Icon(Icons.lock_outline, size: 20, color: myColor),
+                  label: Text(
+                    'Cambia Password',
+                    style: TextStyle(fontSize: 15, color: myColor),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                    backgroundColor: Color(0xFFF9F9F9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () => _showChangePasswordSheet(context),
+                ),
+              ),
+
+              SizedBox(height: 28),
+
+              // Save Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: myColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    // Geocode address if it changed
+                    String? lat;
+                    String? lng;
+                    if (_addressController.text != Auth2.user!.address) {
+                      try {
+                        final query = Uri.encodeComponent(_addressController.text);
+                        final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1';
+                        final response = await http.get(
+                          Uri.parse(url),
+                          headers: {'User-Agent': 'Eboro/1.0'},
+                        ).timeout(const Duration(seconds: 5));
+                        if (response.statusCode == 200) {
+                          final results = json.decode(response.body);
+                          if (results.isNotEmpty) {
+                            lat = results[0]['lat'];
+                            lng = results[0]['lon'];
+                          }
+                        }
+                      } catch (_) {}
+                    }
+
+                    await Auth2.editUserDetails(
+                        _nameController.text,
+                        _emailController.text,
+                        _phoneController.text,
+                        _addressController.text,
+                        base64Image,
+                        fileNames,
+                        null,
+                        null,
+                        null,
+                        context,
+                        codiceFiscale: _codiceFiscaleController.text.trim().isNotEmpty
+                            ? _codiceFiscaleController.text.trim().toUpperCase()
+                            : null);
+                    // Update lat/long locally after save
+                    if (lat != null && lng != null) {
+                      Auth2.user?.lat = lat;
+                      Auth2.user?.long = lng;
+                    }
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    AppLocalizations.of(context)!.translate("save"),
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 30),
+            ],
+          ),
         ),
       ),
     );
