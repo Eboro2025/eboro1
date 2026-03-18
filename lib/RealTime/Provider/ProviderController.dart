@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:eboro/API/Favorite.dart';
 import 'package:eboro/API/Provider.dart';
+import 'package:eboro/main.dart';
 import 'package:eboro/Helper/FavoriteData.dart';
 import 'package:eboro/Helper/MealData.dart';
 import 'package:eboro/Helper/ProductData.dart';
@@ -96,7 +97,9 @@ class ProviderController with ChangeNotifier {
       final deliveryRestored = await _loadDeliveryFromCache();
 
       // لو الكاش ما رجع بيانات توصيل (عنوان مختلف)، نخفي المحلات مؤقتاً
-      if (!deliveryRestored && providers != null) {
+      // Guest: never hide providers (no delivery fetch will happen)
+      final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
+      if (!deliveryRestored && providers != null && !isGuest) {
         final hasLocation = Auth2.user?.activeLat != null &&
             Auth2.user!.activeLat!.isNotEmpty &&
             Auth2.user?.activeLong != null &&
@@ -168,6 +171,9 @@ class ProviderController with ChangeNotifier {
   /// تحميل بيانات التوصيل من الـ cache لو العنوان نفسه
   Future<bool> _loadDeliveryFromCache() async {
     try {
+      // Guest: skip delivery cache (no delivery data to restore)
+      if (MyApp2.token == null || MyApp2.token!.isEmpty) return false;
+
       // لو المستخدم ما حدد موقعه، ما نحمل cache التوصيل عشان ما نخفي المحلات
       final latStr = Auth2.user?.activeLat;
       final longStr = Auth2.user?.activeLong;
@@ -300,14 +306,16 @@ class ProviderController with ChangeNotifier {
 
       // مسح بيانات التوصيل القديمة - نخفي المحلات لحد ما نحسب المسافة الجديدة
       if (providers != null) {
-        final hasLocation = Auth2.user?.activeLat != null &&
+        final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
+        final hasLocation = !isGuest &&
+            Auth2.user?.activeLat != null &&
             Auth2.user!.activeLat!.isNotEmpty &&
             Auth2.user?.activeLong != null &&
             Auth2.user!.activeLong!.isNotEmpty;
         for (final p in providers!) {
           p.Delivery = null;
-          // لو عنده موقع، نخفي المحلات مؤقتاً لحد ما نحسب المسافة
-          // لو ما عنده موقع، نعرض الكل
+          // Guest: show all providers without delivery filtering
+          // لو عنده موقع وtoken، نخفي المحلات مؤقتاً لحد ما نحسب المسافة
           p.outOfDeliveryRange = hasLocation;
         }
       }
@@ -331,6 +339,15 @@ class ProviderController with ChangeNotifier {
 
     final list = providers;
     if (list == null || list.isEmpty) return;
+
+    // Guest: skip delivery calculation, show all providers (with -- fees)
+    if (MyApp2.token == null || MyApp2.token!.isEmpty) {
+      for (final p in list) {
+        p.outOfDeliveryRange = false;
+      }
+      notifyListeners();
+      return;
+    }
 
     // لو المستخدم ما حدد موقعه، ما نحسب التوصيل ونعرض كل المحلات
     final latStr = Auth2.user?.activeLat;
@@ -417,7 +434,10 @@ class ProviderController with ChangeNotifier {
       _saveToCache(providers);
 
       // مسح بيانات التوصيل القديمة - نخفي المحلات لحد ما نحسب المسافة الجديدة
-      final hasLocation = Auth2.user?.activeLat != null &&
+      // Guest: never hide providers (no delivery fetch will happen)
+      final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
+      final hasLocation = !isGuest &&
+          Auth2.user?.activeLat != null &&
           Auth2.user!.activeLat!.isNotEmpty &&
           Auth2.user?.activeLong != null &&
           Auth2.user!.activeLong!.isNotEmpty;

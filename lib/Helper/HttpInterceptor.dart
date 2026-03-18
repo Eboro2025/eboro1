@@ -65,8 +65,8 @@ class HttpInterceptor {
       headers: headers,
     );
 
-    // Si el token expiró (401), intentar refrescarlo
-    if (response.statusCode == 401 && retryCount == 0) {
+    // Si el token expiró (401), intentar refrescarlo (skip for guest)
+    if (response.statusCode == 401 && retryCount == 0 && MyApp2.token != null && MyApp2.token!.isNotEmpty) {
       bool refreshed = await Auth2.refreshToken(_getContext(context));
 
       if (refreshed) {
@@ -90,8 +90,8 @@ class HttpInterceptor {
   }) async {
     final response = await _postNoRedirect(url, headers: headers, body: body);
 
-    // Si el token expiró (401), intentar refrescarlo
-    if (response.statusCode == 401 && retryCount == 0) {
+    // Si el token expiró (401), intentar refrescarlo (skip for guest)
+    if (response.statusCode == 401 && retryCount == 0 && MyApp2.token != null && MyApp2.token!.isNotEmpty) {
       bool refreshed = await Auth2.refreshToken(_getContext(context));
 
       if (refreshed) {

@@ -38,9 +38,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti vicini e per le consegne.</string>
+	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti vicini, calcolare i costi di consegna e tracciare il tuo ordine in tempo reale.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Abbiamo bisogno della tua posizione per le consegne.</string>
+	<string>Abbiamo bisogno della tua posizione per inviarti notifiche sullo stato della consegna quando l'app è in background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti e i negozi vicini a te.</string>
 	<key>UIApplicationSceneManifest</key>
@@ -90,16 +90,10 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Abbiamo bisogno del microfono per registrare video.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Necessario per la connessione con la stampante.</string>
-	<key>NSPrefPaneIconFile</key>
-	<string></string>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array/>
-	<key>CFBundleGetInfoString</key>
-	<string></string>
-	<key>NSContactsUsageDescription</key>
-	<string>uso per carcre foto  si ci rimborso</string>
+	<string>Necessario per migliorare la precisione della posizione durante la consegna.</string>
 	<key>LSApplicationCategoryType</key>
-	<string></string>
+	<string>public.app-category.food-and-drink</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

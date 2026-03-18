@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/API/Categories.dart';
@@ -25,12 +26,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:eboro/All/NotificationService.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-// String globalUrl = "http://192.168.0.141:8000"; // Local server
-// String globalUrl = "https://partnerseboro.it"; // Test server
-// String globalUrl = "http://10.0.2.2:8000"; // Local server via emulator
-String globalUrl = "https://eboro.it"; // Production server
+String globalUrl = "https://eboro.it";
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -228,22 +228,26 @@ class MyApp2 extends State<MyHomePage> {
 
   startTime() async {
     try {
+      print('DEBUG: startTime() called');
       prefs = await SharedPreferences.getInstance();
       apiLang = prefs.getString('apiLang');
       token = prefs.getString('token');
       firstTime = prefs.getString('firstTime');
       type = prefs.getString('type');
+      print('DEBUG: token=$token, apiLang=$apiLang');
 
       await getlangValues();
+      print('DEBUG: getlangValues done');
 
       // استخدام Future.microtask بدلاً من Timer لتحسين الأداء
       Future.microtask(() {
         if (mounted) {
+          print('DEBUG: calling checkInternetState');
           checkInternetState();
         }
       });
     } catch (e) {
-      // print('Error in startTime: $e');
+      print('DEBUG: Error in startTime: $e');
       if (mounted) {
         checkInternetState();
       }
@@ -308,9 +312,26 @@ class MyApp2 extends State<MyHomePage> {
 
       if (!mounted) return message;
 
+      print('DEBUG: checkState response status=${response.statusCode}');
       if (response.statusCode == 200) {
         Map A = json.decode(response.body);
+        print('DEBUG: checkState body=$A');
+
+        // Force update check
+        String? minVersion = A['min_version'];
+        if (minVersion != null && minVersion.isNotEmpty) {
+          try {
+            final packageInfo = await PackageInfo.fromPlatform();
+            if (_isVersionOlder(packageInfo.version, minVersion)) {
+              print('DEBUG: force update required');
+              if (mounted) _showForceUpdateDialog();
+              return message;
+            }
+          } catch (_) {}
+        }
+
         String? state = A['state'];
+        print('DEBUG: state=$state');
         if (state == 'open') {
           await checkAuth();
         } else {
@@ -336,23 +357,37 @@ class MyApp2 extends State<MyHomePage> {
   }
 
   Future<void> checkAuth() async {
+    print('DEBUG: checkAuth called, token=$token');
     if (!mounted) return;
 
     if (token == null) {
+      print('DEBUG: no token, going to login');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),
       );
     } else {
       try {
-        final value = await Auth2.getUserDetails(context);
+        print('DEBUG: calling getUserDetails');
+        final value = await Auth2.getUserDetails(context).timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => null,
+        );
+        print('DEBUG: getUserDetails done, name=${value?.name}');
         if (!mounted) return;
 
         if (value?.name?.isNotEmpty ?? false) {
+          print('DEBUG: calling go()');
           await go();
+        } else {
+          print('DEBUG: name is empty or null, going to login');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
         }
       } catch (e) {
-        // print('Error in checkAuth: $e');
+        print('DEBUG: Error in checkAuth: $e');
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -365,8 +400,11 @@ class MyApp2 extends State<MyHomePage> {
 
   Future<void> go() async {
     try {
+      print('DEBUG: go() called');
       // Always get current GPS location on app open
+      print('DEBUG: calling setLocationFromGPS');
       await Auth2.setLocationFromGPS();
+      print('DEBUG: setLocationFromGPS done');
 
       final order = Provider.of<UserOrderProvider>(context, listen: false);
       final providerController =
@@ -412,6 +450,45 @@ class MyApp2 extends State<MyHomePage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => page),
+    );
+  }
+
+  bool _isVersionOlder(String current, String minimum) {
+    final cur = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final min = minimum.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    while (cur.length < 3) cur.add(0);
+    while (min.length < 3) min.add(0);
+    for (int i = 0; i < 3; i++) {
+      if (cur[i] < min[i]) return true;
+      if (cur[i] > min[i]) return false;
+    }
+    return false;
+  }
+
+  void _showForceUpdateDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('Aggiornamento richiesto'),
+          content: const Text(
+            'È disponibile una nuova versione dell\'app. Per continuare ad utilizzare Eboro, aggiorna l\'app.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                final url = Platform.isIOS
+                    ? 'https://apps.apple.com/app/eboro/id6670428798'
+                    : 'https://play.google.com/store/apps/details?id=com.codiano.eboro';
+                launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              },
+              child: const Text('Aggiorna ora', style: TextStyle(color: Color(0xFFC12732))),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

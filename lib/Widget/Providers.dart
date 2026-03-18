@@ -14,12 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:eboro/Helper/UserData.dart';
-import 'package:eboro/package/lib/src/map.dart';
-import 'package:eboro/package/lib/src/address_result.dart';
 import '../API/Auth.dart';
-import '../API/Provider.dart';
 import '../RealTime/Provider/CartTextProvider.dart';
 import '../RealTime/Provider/ProductCacheProvider.dart';
 import '../main.dart' show globalUrl;
@@ -511,9 +506,12 @@ class Providers2 extends State<Providers> {
     final bool hasActiveFilter = _selectedFilterKey.isNotEmpty;
     final bool hasLocation = _userHasValidLocation();
 
-    // No location set → show only map to pick location (clean page)
+    // No location set → auto-open full map picker
     if (!hasLocation) {
-      return _buildSelectLocationCard();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_userHasValidLocation()) widget.onSelectLocation?.call();
+      });
+      return const Center(child: CircularProgressIndicator());
     }
 
     return ListView(
@@ -721,106 +719,6 @@ class Providers2 extends State<Providers> {
               ),
             ),
         ],
-      ],
-    );
-  }
-
-  // ------------------ SELECT LOCATION CARD ------------------
-  Widget _buildSelectLocationCard() {
-    return Column(
-      children: [
-        // Live Google Map
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          height: 350,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              children: [
-                GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: LatLng(45.4642, 9.1900), // Milano default
-                    zoom: 12,
-                  ),
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: true,
-                  mapToolbarEnabled: false,
-                  onTap: (_) => widget.onSelectLocation?.call(),
-                ),
-                // Pin in center
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: 36),
-                        child: Icon(Icons.location_on, color: Colors.red, size: 48),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // Text and button
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              const Text(
-                'Dove vuoi ricevere il tuo ordine?',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2E3333),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Seleziona la tua posizione per vedere i ristoranti disponibili nella tua zona.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: widget.onSelectLocation,
-                  icon: const Icon(Icons.location_on, size: 20),
-                  label: const Text(
-                    'Seleziona posizione',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: myColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

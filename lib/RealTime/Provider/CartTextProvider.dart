@@ -35,26 +35,19 @@ class CartTextProvider with ChangeNotifier {
     if (_isProcessing) return;
     _isProcessing = true;
 
+    bool dialogShown = false;
     try {
       // التحقق من المحل إذا كانت السلة غير فارغة
       if (!isCartEmpty && providerId != null && currentProviderId != null) {
         if (providerId != currentProviderId) {
           // المنتج من محل مختلف - نعرض تحذير للمستخدم
-          if (context != null) {
-            final shouldClear = await _showClearCartDialog(context);
+          final ctx = context ?? navigatorKey.currentContext;
+          if (ctx != null) {
+            final shouldClear = await _showClearCartDialog(ctx);
             if (shouldClear != true) {
               return;
             }
-            await _clearCartFromAPI(context);
-          } else {
-            final ctx = navigatorKey.currentContext;
-            if (ctx != null) {
-              final shouldClear = await _showClearCartDialog(ctx);
-              if (shouldClear != true) {
-                return;
-              }
-              await _clearCartFromAPI(ctx);
-            }
+            await _clearCartFromAPI(ctx);
           }
         }
       }
@@ -62,13 +55,21 @@ class CartTextProvider with ChangeNotifier {
       final ctx = navigatorKey.currentContext;
       if (ctx == null) return;
       Progress.progressDialogue(ctx);
+      dialogShown = true;
       await Cart().addToCart(extras, item, qty);
       await updateCart();
-      if (navigatorKey.currentContext != null) {
-        Progress.dimesDialog(navigatorKey.currentContext!);
-      }
+    } catch (e) {
+      debugPrint('❌ CartTextProvider.addCartItem error: $e');
     } finally {
       _isProcessing = false;
+      if (dialogShown) {
+        try {
+          final ctx = navigatorKey.currentContext;
+          if (ctx != null) {
+            Progress.dimesDialog(ctx);
+          }
+        } catch (_) {}
+      }
     }
   }
 
@@ -140,13 +141,19 @@ class CartTextProvider with ChangeNotifier {
   deleteCartItem(i, context) async {
     if (_isProcessing) return;
     _isProcessing = true;
+    bool dialogShown = false;
     try {
       Progress.progressDialogue(context);
+      dialogShown = true;
       await Cart().deleteCartItem(i, context);
       await updateCart();
-      Progress.dimesDialog(context);
+    } catch (e) {
+      debugPrint('❌ CartTextProvider.deleteCartItem error: $e');
     } finally {
       _isProcessing = false;
+      if (dialogShown) {
+        try { Progress.dimesDialog(context); } catch (_) {}
+      }
     }
   }
 

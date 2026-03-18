@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:eboro/API/Auth.dart';
+import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
+import 'package:provider/provider.dart' as prov;
 import 'package:eboro/Auth/Signup.dart';
 import 'package:eboro/Auth/PhoneLogin.dart';
 import 'package:eboro/Client/Addresses.dart';
@@ -930,11 +932,27 @@ class _LoginScreenState extends State<LoginScreen> {
           final savedEmail = email != null ? email : await loadFromStorage('apple_email');
           final savedName = fullName.isNotEmpty ? fullName : await loadFromStorage('apple_fullname');
 
-          // print('DEBUG APPLE');
+          print('DEBUG APPLE: email=$email savedEmail=$savedEmail savedName=$savedName token=${token.substring(0, 20)}...');
 
           if (email != null) await saveToStorage('apple_email', email);
           if (fullName.isNotEmpty) await saveToStorage('apple_fullname', fullName);
 
+          if (savedEmail.isEmpty) {
+            // Apple non ha fornito l'email - usa il token direttamente
+            // Il server può estrarre l'email dal JWT token di Apple
+            if (!mounted) return;
+            await Auth2.googlefacebooklogin(
+              'apple_$token',
+              savedName.isNotEmpty ? savedName : 'Utente Apple',
+              null,
+              token,
+              "3",
+              context,
+            );
+            return;
+          }
+
+          if (!mounted) return;
           await Auth2.googlefacebooklogin(
             savedEmail,
             savedName,
@@ -1039,6 +1057,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _joinAsGuest() async {
+    // Clear old session data for fresh guest
+    MyApp2.token = null;
+    MyApp2.prefs.remove('token');
+    Auth2.user = null;
+    UserData.clearDeliveryAddress();
+
     String guestAddress = "Posizione corrente";
     String guestLat = "45.49181009999999";
     String guestLong = "9.1897173";
@@ -1075,6 +1099,15 @@ class _LoginScreenState extends State<LoginScreen> {
       long: guestLong,
       type: "0",
     );
+
+    // Clear cart for fresh guest session
+    if (mounted) {
+      try {
+        final cart = prov.Provider.of<CartTextProvider>(context, listen: false);
+        await cart.clearCartSilent();
+      } catch (_) {}
+    }
+
     await Categories2.getGuestCategories(flag: true, context: context);
   }
 

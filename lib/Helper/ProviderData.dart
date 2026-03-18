@@ -81,11 +81,15 @@ class ProviderData {
       String myUrl = "$globalUrl/api/delivery-fees/${id}/${latStr}/${longStr}";
       print('DEBUG fetchDeliveryData: provider=$id url=$myUrl');
 
-      final response = await http.get(Uri.parse(myUrl), headers: {
+      final headers = <String, String>{
         'apiLang': MyApp2.apiLang.toString(),
         'Accept': 'application/json',
-        'Authorization': "${MyApp2.token}",
-      }).timeout(const Duration(seconds: 5));
+      };
+      if (MyApp2.token != null && MyApp2.token!.isNotEmpty) {
+        headers['Authorization'] = MyApp2.token!;
+      }
+      final response = await http.get(Uri.parse(myUrl), headers: headers)
+          .timeout(const Duration(seconds: 5));
 
       print('DEBUG fetchDeliveryData: provider=$id statusCode=${response.statusCode} body=${response.body}');
 

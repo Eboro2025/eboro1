@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/main.dart';
 
-/// صفحة لتحديث بيانات التوصيل
 class EditHouseInfo extends StatefulWidget {
   const EditHouseInfo({Key? key}) : super(key: key);
 
@@ -18,79 +17,44 @@ class _EditHouseInfoState extends State<EditHouseInfo> {
   late TextEditingController _whatsappController;
   bool _isSaving = false;
 
+  static const _black = Color(0xFF0A0A0A);
+  static const _midGrey = Color(0xFF8E8E93);
+  static const _borderColor = Color(0xFFE5E5E5);
+
   static const List<Map<String, String>> _countryCodes = [
-    {'code': '+39', 'flag': '🇮🇹', 'name': 'Italia'},
-    {'code': '+1', 'flag': '🇺🇸', 'name': 'USA'},
-    {'code': '+44', 'flag': '🇬🇧', 'name': 'UK'},
-    {'code': '+33', 'flag': '🇫🇷', 'name': 'Francia'},
-    {'code': '+49', 'flag': '🇩🇪', 'name': 'Germania'},
-    {'code': '+34', 'flag': '🇪🇸', 'name': 'Spagna'},
-    {'code': '+351', 'flag': '🇵🇹', 'name': 'Portogallo'},
-    {'code': '+41', 'flag': '🇨🇭', 'name': 'Svizzera'},
-    {'code': '+43', 'flag': '🇦🇹', 'name': 'Austria'},
-    {'code': '+32', 'flag': '🇧🇪', 'name': 'Belgio'},
-    {'code': '+31', 'flag': '🇳🇱', 'name': 'Paesi Bassi'},
-    {'code': '+46', 'flag': '🇸🇪', 'name': 'Svezia'},
-    {'code': '+47', 'flag': '🇳🇴', 'name': 'Norvegia'},
-    {'code': '+45', 'flag': '🇩🇰', 'name': 'Danimarca'},
-    {'code': '+48', 'flag': '🇵🇱', 'name': 'Polonia'},
-    {'code': '+40', 'flag': '🇷🇴', 'name': 'Romania'},
-    {'code': '+30', 'flag': '🇬🇷', 'name': 'Grecia'},
-    {'code': '+90', 'flag': '🇹🇷', 'name': 'Turchia'},
-    {'code': '+7', 'flag': '🇷🇺', 'name': 'Russia'},
-    {'code': '+380', 'flag': '🇺🇦', 'name': 'Ucraina'},
-    {'code': '+86', 'flag': '🇨🇳', 'name': 'Cina'},
-    {'code': '+81', 'flag': '🇯🇵', 'name': 'Giappone'},
-    {'code': '+91', 'flag': '🇮🇳', 'name': 'India'},
-    {'code': '+55', 'flag': '🇧🇷', 'name': 'Brasile'},
-    {'code': '+54', 'flag': '🇦🇷', 'name': 'Argentina'},
-    {'code': '+52', 'flag': '🇲🇽', 'name': 'Messico'},
-    {'code': '+20', 'flag': '🇪🇬', 'name': 'Egitto'},
-    {'code': '+212', 'flag': '🇲🇦', 'name': 'Marocco'},
-    {'code': '+216', 'flag': '🇹🇳', 'name': 'Tunisia'},
-    {'code': '+213', 'flag': '🇩🇿', 'name': 'Algeria'},
-    {'code': '+234', 'flag': '🇳🇬', 'name': 'Nigeria'},
-    {'code': '+27', 'flag': '🇿🇦', 'name': 'Sudafrica'},
-    {'code': '+966', 'flag': '🇸🇦', 'name': 'Arabia Saudita'},
-    {'code': '+971', 'flag': '🇦🇪', 'name': 'Emirati Arabi'},
-    {'code': '+962', 'flag': '🇯🇴', 'name': 'Giordania'},
-    {'code': '+961', 'flag': '🇱🇧', 'name': 'Libano'},
-    {'code': '+964', 'flag': '🇮🇶', 'name': 'Iraq'},
-    {'code': '+98', 'flag': '🇮🇷', 'name': 'Iran'},
-    {'code': '+92', 'flag': '🇵🇰', 'name': 'Pakistan'},
-    {'code': '+880', 'flag': '🇧🇩', 'name': 'Bangladesh'},
-    {'code': '+94', 'flag': '🇱🇰', 'name': 'Sri Lanka'},
-    {'code': '+63', 'flag': '🇵🇭', 'name': 'Filippine'},
-    {'code': '+61', 'flag': '🇦🇺', 'name': 'Australia'},
-    {'code': '+64', 'flag': '🇳🇿', 'name': 'Nuova Zelanda'},
-    {'code': '+82', 'flag': '🇰🇷', 'name': 'Corea del Sud'},
-    {'code': '+60', 'flag': '🇲🇾', 'name': 'Malesia'},
-    {'code': '+65', 'flag': '🇸🇬', 'name': 'Singapore'},
-    {'code': '+66', 'flag': '🇹🇭', 'name': 'Thailandia'},
-    {'code': '+84', 'flag': '🇻🇳', 'name': 'Vietnam'},
-    {'code': '+62', 'flag': '🇮🇩', 'name': 'Indonesia'},
-    {'code': '+353', 'flag': '🇮🇪', 'name': 'Irlanda'},
-    {'code': '+358', 'flag': '🇫🇮', 'name': 'Finlandia'},
-    {'code': '+36', 'flag': '🇭🇺', 'name': 'Ungheria'},
-    {'code': '+420', 'flag': '🇨🇿', 'name': 'Rep. Ceca'},
-    {'code': '+421', 'flag': '🇸🇰', 'name': 'Slovacchia'},
-    {'code': '+385', 'flag': '🇭🇷', 'name': 'Croazia'},
-    {'code': '+386', 'flag': '🇸🇮', 'name': 'Slovenia'},
-    {'code': '+381', 'flag': '🇷🇸', 'name': 'Serbia'},
-    {'code': '+359', 'flag': '🇧🇬', 'name': 'Bulgaria'},
-    {'code': '+370', 'flag': '🇱🇹', 'name': 'Lituania'},
-    {'code': '+371', 'flag': '🇱🇻', 'name': 'Lettonia'},
-    {'code': '+372', 'flag': '🇪🇪', 'name': 'Estonia'},
-    {'code': '+56', 'flag': '🇨🇱', 'name': 'Cile'},
-    {'code': '+57', 'flag': '🇨🇴', 'name': 'Colombia'},
-    {'code': '+51', 'flag': '🇵🇪', 'name': 'Perù'},
-    {'code': '+58', 'flag': '🇻🇪', 'name': 'Venezuela'},
-    {'code': '+593', 'flag': '🇪🇨', 'name': 'Ecuador'},
-    {'code': '+254', 'flag': '🇰🇪', 'name': 'Kenya'},
-    {'code': '+255', 'flag': '🇹🇿', 'name': 'Tanzania'},
-    {'code': '+233', 'flag': '🇬🇭', 'name': 'Ghana'},
-    {'code': '+251', 'flag': '🇪🇹', 'name': 'Etiopia'},
-    {'code': '+256', 'flag': '🇺🇬', 'name': 'Uganda'},
+    {'code': '+39', 'flag': '\u{1F1EE}\u{1F1F9}', 'name': 'Italia'},
+    {'code': '+1', 'flag': '\u{1F1FA}\u{1F1F8}', 'name': 'USA'},
+    {'code': '+44', 'flag': '\u{1F1EC}\u{1F1E7}', 'name': 'UK'},
+    {'code': '+33', 'flag': '\u{1F1EB}\u{1F1F7}', 'name': 'Francia'},
+    {'code': '+49', 'flag': '\u{1F1E9}\u{1F1EA}', 'name': 'Germania'},
+    {'code': '+34', 'flag': '\u{1F1EA}\u{1F1F8}', 'name': 'Spagna'},
+    {'code': '+351', 'flag': '\u{1F1F5}\u{1F1F9}', 'name': 'Portogallo'},
+    {'code': '+41', 'flag': '\u{1F1E8}\u{1F1ED}', 'name': 'Svizzera'},
+    {'code': '+43', 'flag': '\u{1F1E6}\u{1F1F9}', 'name': 'Austria'},
+    {'code': '+32', 'flag': '\u{1F1E7}\u{1F1EA}', 'name': 'Belgio'},
+    {'code': '+31', 'flag': '\u{1F1F3}\u{1F1F1}', 'name': 'Paesi Bassi'},
+    {'code': '+20', 'flag': '\u{1F1EA}\u{1F1EC}', 'name': 'Egitto'},
+    {'code': '+212', 'flag': '\u{1F1F2}\u{1F1E6}', 'name': 'Marocco'},
+    {'code': '+216', 'flag': '\u{1F1F9}\u{1F1F3}', 'name': 'Tunisia'},
+    {'code': '+213', 'flag': '\u{1F1E9}\u{1F1FF}', 'name': 'Algeria'},
+    {'code': '+966', 'flag': '\u{1F1F8}\u{1F1E6}', 'name': 'Arabia Saudita'},
+    {'code': '+971', 'flag': '\u{1F1E6}\u{1F1EA}', 'name': 'Emirati Arabi'},
+    {'code': '+962', 'flag': '\u{1F1EF}\u{1F1F4}', 'name': 'Giordania'},
+    {'code': '+961', 'flag': '\u{1F1F1}\u{1F1E7}', 'name': 'Libano'},
+    {'code': '+964', 'flag': '\u{1F1EE}\u{1F1F6}', 'name': 'Iraq'},
+    {'code': '+92', 'flag': '\u{1F1F5}\u{1F1F0}', 'name': 'Pakistan'},
+    {'code': '+880', 'flag': '\u{1F1E7}\u{1F1E9}', 'name': 'Bangladesh'},
+    {'code': '+91', 'flag': '\u{1F1EE}\u{1F1F3}', 'name': 'India'},
+    {'code': '+86', 'flag': '\u{1F1E8}\u{1F1F3}', 'name': 'Cina'},
+    {'code': '+55', 'flag': '\u{1F1E7}\u{1F1F7}', 'name': 'Brasile'},
+    {'code': '+90', 'flag': '\u{1F1F9}\u{1F1F7}', 'name': 'Turchia'},
+    {'code': '+7', 'flag': '\u{1F1F7}\u{1F1FA}', 'name': 'Russia'},
+    {'code': '+380', 'flag': '\u{1F1FA}\u{1F1E6}', 'name': 'Ucraina'},
+    {'code': '+48', 'flag': '\u{1F1F5}\u{1F1F1}', 'name': 'Polonia'},
+    {'code': '+40', 'flag': '\u{1F1F7}\u{1F1F4}', 'name': 'Romania'},
+    {'code': '+234', 'flag': '\u{1F1F3}\u{1F1EC}', 'name': 'Nigeria'},
+    {'code': '+63', 'flag': '\u{1F1F5}\u{1F1ED}', 'name': 'Filippine'},
+    {'code': '+62', 'flag': '\u{1F1EE}\u{1F1E9}', 'name': 'Indonesia'},
   ];
 
   String _selectedCountryCode = '+39';
@@ -102,10 +66,11 @@ class _EditHouseInfoState extends State<EditHouseInfo> {
     _intercomController =
         TextEditingController(text: Auth2.user?.intercom ?? "");
     final wp = Auth2.user?.whatsapp ?? "";
-    // Parse existing whatsapp to extract country code and number
     String number = (wp.isNotEmpty && wp != "0") ? wp : "";
     if (number.startsWith('+')) {
-      for (final country in _countryCodes) {
+      final sorted = List<Map<String, String>>.from(_countryCodes)
+        ..sort((a, b) => b['code']!.length.compareTo(a['code']!.length));
+      for (final country in sorted) {
         if (number.startsWith(country['code']!)) {
           _selectedCountryCode = country['code']!;
           number = number.substring(country['code']!.length).trim();
@@ -161,144 +126,225 @@ class _EditHouseInfoState extends State<EditHouseInfo> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: myColor,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         centerTitle: true,
         elevation: 0,
-        title: Text(
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.5),
+          child: Container(height: 0.5, color: _borderColor),
+        ),
+        title: const Text(
           "Conferma indirizzo",
           style: TextStyle(
-            fontSize: MyApp2.fontSize16,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            fontSize: 17,
+            color: _black,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.4,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: _black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Address header
-                Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: myColor.withValues(alpha: 0.05),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.location_on, color: myColor, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          Auth2.user?.address ?? "",
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[700],
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Form(
+                  key: _formKey,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+
+                        // Address display
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _borderColor),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Fields
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // House / Address
-                      _buildField(
-                        controller: _houseController,
-                        label: "N° civico",
-                        hint: "Es. 22",
-                        icon: Icons.home_outlined,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Obbligatorio";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Interfono
-                      _buildField(
-                        controller: _intercomController,
-                        label: "Citofono",
-                        hint: "Nome sul citofono",
-                        icon: Icons.doorbell_outlined,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Obbligatorio";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // WhatsApp (optional)
-                      _buildWhatsAppField(),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Save button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: myColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: _isSaving ? null : _save,
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, color: _black, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  Auth2.user?.address ?? "",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: _black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            )
-                          : Text(
-                              "Salva",
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Section
+                        const Text(
+                          'DETTAGLI',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _midGrey,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        _buildMinimalField(
+                          controller: _houseController,
+                          label: 'N\u00B0 Civico',
+                          required: true,
+                        ),
+                        const SizedBox(height: 14),
+
+                        _buildMinimalField(
+                          controller: _intercomController,
+                          label: 'Citofono',
+                          required: true,
+                        ),
+
+                        const SizedBox(height: 32),
+                        Container(height: 0.5, color: _borderColor),
+                        const SizedBox(height: 32),
+
+                        // WhatsApp section
+                        Row(
+                          children: [
+                            const Text(
+                              'WHATSAPP',
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
+                                color: _midGrey,
+                                letterSpacing: 1.2,
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: _borderColor),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Opzionale',
+                                style: TextStyle(fontSize: 10, color: _midGrey),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        _buildWhatsAppField(),
+
+                        const SizedBox(height: 40),
+                      ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 30),
-              ],
+              ),
             ),
-          ),
+
+            // Save button
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: _borderColor, width: 0.5)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+              child: SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: myColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: _isSaving ? null : _save,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            "Salva",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMinimalField({
+    required TextEditingController controller,
+    required String label,
+    bool required = false,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 15, color: _black, fontWeight: FontWeight.w400),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 14, color: _midGrey, fontWeight: FontWeight.w400),
+        floatingLabelStyle: const TextStyle(fontSize: 13, color: _black, fontWeight: FontWeight.w500),
+        filled: false,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _black, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDC2626)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      validator: required
+          ? (v) => v == null || v.trim().isEmpty ? 'Obbligatorio' : null
+          : null,
     );
   }
 
@@ -308,105 +354,40 @@ class _EditHouseInfoState extends State<EditHouseInfo> {
       orElse: () => _countryCodes.first,
     );
 
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.chat_outlined, size: 18, color: myColor),
-            const SizedBox(width: 6),
-            Text(
-              "WhatsApp",
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
+        GestureDetector(
+          onTap: _showCountryCodePicker,
+          child: Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _borderColor),
             ),
-            const SizedBox(width: 6),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Opzionale',
-                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(selected['flag']!, style: const TextStyle(fontSize: 18)),
+                const SizedBox(width: 6),
+                Text(
+                  selected['code']!,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: _black),
+                ),
+                const SizedBox(width: 2),
+                const Icon(Icons.keyboard_arrow_down, size: 16, color: _midGrey),
+              ],
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Country code dropdown
-            GestureDetector(
-              onTap: () => _showCountryCodePicker(),
-              child: Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      selected['flag']!,
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      selected['code']!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(Icons.arrow_drop_down,
-                        size: 18, color: Colors.grey[600]),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Phone number field
-            Expanded(
-              child: TextFormField(
-                controller: _whatsappController,
-                keyboardType: TextInputType.phone,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w500),
-                decoration: InputDecoration(
-                  hintText: "3XX XXX XXXX",
-                  hintStyle:
-                      TextStyle(color: Colors.grey[400], fontSize: 14),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: myColor, width: 1.5),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 14),
-                ),
-              ),
-            ),
-          ],
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildMinimalField(
+            controller: _whatsappController,
+            label: '3XX XXX XXXX',
+            keyboardType: TextInputType.phone,
+          ),
         ),
       ],
     );
@@ -419,182 +400,115 @@ class _EditHouseInfoState extends State<EditHouseInfo> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            return DraggableScrollableSheet(
-              initialChildSize: 0.7,
-              maxChildSize: 0.9,
-              minChildSize: 0.5,
-              expand: false,
-              builder: (ctx, scrollController) {
-                return Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16),
-                      child: TextField(
-                        controller: searchController,
-                        decoration: InputDecoration(
-                          hintText: "Cerca paese...",
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 12),
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: DraggableScrollableSheet(
+                initialChildSize: 0.7,
+                maxChildSize: 0.9,
+                minChildSize: 0.5,
+                expand: false,
+                builder: (ctx, scrollController) {
+                  return Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _borderColor,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        onChanged: (query) {
-                          setModalState(() {
-                            filtered = _countryCodes.where((c) {
-                              final q = query.toLowerCase();
-                              return c['name']!
-                                      .toLowerCase()
-                                      .contains(q) ||
-                                  c['code']!.contains(q);
-                            }).toList();
-                          });
-                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        itemCount: filtered.length,
-                        itemBuilder: (ctx, i) {
-                          final country = filtered[i];
-                          final isSelected =
-                              country['code'] == _selectedCountryCode;
-                          return ListTile(
-                            leading: Text(
-                              country['flag']!,
-                              style: const TextStyle(fontSize: 24),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Paese',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _black),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: TextField(
+                          controller: searchController,
+                          style: const TextStyle(fontSize: 15, color: _black),
+                          decoration: InputDecoration(
+                            hintText: "Cerca...",
+                            hintStyle: const TextStyle(color: _midGrey),
+                            prefixIcon: const Icon(Icons.search, color: _midGrey, size: 20),
+                            filled: true,
+                            fillColor: const Color(0xFFF5F5F5),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
-                            title: Text(country['name']!),
-                            trailing: Text(
-                              country['code']!,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? myColor
-                                    : Colors.grey[600],
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onChanged: (query) {
+                            setModalState(() {
+                              filtered = _countryCodes.where((c) {
+                                final q = query.toLowerCase();
+                                return c['name']!.toLowerCase().contains(q) ||
+                                    c['code']!.contains(q);
+                              }).toList();
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView.separated(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Container(height: 0.5, color: _borderColor),
+                          ),
+                          itemBuilder: (ctx, i) {
+                            final country = filtered[i];
+                            final isSelected = country['code'] == _selectedCountryCode;
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                              leading: Text(country['flag']!, style: const TextStyle(fontSize: 22)),
+                              title: Text(
+                                country['name']!,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                  color: _black,
+                                ),
                               ),
-                            ),
-                            selected: isSelected,
-                            selectedTileColor:
-                                myColor.withValues(alpha: 0.05),
-                            onTap: () {
-                              setState(() {
-                                _selectedCountryCode =
-                                    country['code']!;
-                              });
-                              Navigator.pop(ctx);
-                            },
-                          );
-                        },
+                              trailing: Text(
+                                country['code']!,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: isSelected ? _black : _midGrey,
+                                ),
+                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              onTap: () {
+                                setState(() => _selectedCountryCode = country['code']!);
+                                Navigator.pop(ctx);
+                              },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             );
           },
         );
       },
-    );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-    bool isOptional = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 18, color: myColor),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-            ),
-            if (isOptional) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Opzionale',
-                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: myColor, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 1),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
-          validator: validator,
-        ),
-      ],
     );
   }
 }

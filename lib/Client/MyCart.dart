@@ -7,6 +7,7 @@ import 'package:eboro/API/Order.dart';
 import 'package:eboro/API/Provider.dart';
 import 'package:eboro/Client/Home.dart';
 import 'package:eboro/Client/Addresses.dart';
+import 'package:eboro/Auth/QuickRegister.dart';
 import 'package:eboro/Client/Location.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
 import 'package:eboro/Widget/CartItem.dart';
@@ -96,6 +97,9 @@ class MyCart2 extends State<MyCart> {
   final TextEditingController _cvvController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _promoController = TextEditingController();
+  final TextEditingController _cartHouseController = TextEditingController();
+  final TextEditingController _cartIntercomController = TextEditingController();
+  final TextEditingController _cartPhoneController = TextEditingController();
 
   DateTime order_at = DateTime.now();
   String selectedTime = 'Now';
@@ -123,6 +127,9 @@ class MyCart2 extends State<MyCart> {
   @override
   void initState() {
     super.initState();
+    _cartHouseController.text = Auth2.user?.house ?? '';
+    _cartIntercomController.text = Auth2.user?.intercom ?? '';
+    _cartPhoneController.text = Auth2.user?.mobile ?? '';
 
     // Initialize Pay client (سريع)
     _initializePayment();
@@ -540,95 +547,80 @@ class MyCart2 extends State<MyCart> {
               color: Colors.grey[800],
             ),
           ),
-          // عرض البيانات الموجودة مع أيقونة تعديل
-          if ((Auth2.user?.house != null &&
-                  Auth2.user!.house!.trim().isNotEmpty) ||
-              (Auth2.user?.intercom != null &&
-                  Auth2.user!.intercom!.trim().isNotEmpty))
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: GestureDetector(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AddAddress(popAfterSave: true)),
-                  );
-                  await Auth2.getUserDetails(context);
-                  if (mounted) setState(() {});
-                },
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        [
-                          if (Auth2.user?.house != null &&
-                              Auth2.user!.house!.trim().isNotEmpty)
-                            "N° ${Auth2.user!.house}",
-                          if (Auth2.user?.intercom != null &&
-                              Auth2.user!.intercom!.trim().isNotEmpty)
-                            "Citofono: ${Auth2.user!.intercom}",
-                        ].join(" · "),
-                        style: TextStyle(
-                          fontSize: MyApp2.fontSize14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.edit, size: 16, color: Colors.grey[500]),
-                  ],
+          const SizedBox(height: 10),
+          // Inline fields for N° Civico, Citofono, Telefono
+          Row(
+            children: [
+              Expanded(
+                child: _buildInlineField(
+                  controller: _cartHouseController,
+                  label: 'N° Civico',
+                  icon: Icons.tag_rounded,
+                  onChanged: (v) {
+                    Auth2.user?.house = v;
+                    setState(() {});
+                  },
                 ),
               ),
-            ),
-          // تحذير لو فيه بيانات ناقصة
-          Builder(builder: (_) {
-            final missingFields = <String>[];
-            if (Auth2.user?.house == null || Auth2.user!.house!.trim().isEmpty)
-              missingFields.add("N° civico");
-            if (Auth2.user?.intercom == null ||
-                Auth2.user!.intercom!.trim().isEmpty)
-              missingFields.add("Citofono");
-            if (missingFields.isEmpty) return SizedBox.shrink();
-            return GestureDetector(
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const AddAddress(popAfterSave: true)),
-                );
-                await Auth2.getUserDetails(context);
-                if (mounted) setState(() {});
-              },
-              child: Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "Mancano: ${missingFields.join(", ")}",
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.orange.shade800),
-                      ),
-                    ),
-                    Icon(Icons.edit, color: Colors.orange.shade600, size: 16),
-                  ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildInlineField(
+                  controller: _cartIntercomController,
+                  label: 'Citofono',
+                  icon: Icons.doorbell_outlined,
+                  onChanged: (v) {
+                    Auth2.user?.intercom = v;
+                    setState(() {});
+                  },
                 ),
               ),
-            );
-          }),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildInlineField(
+            controller: _cartPhoneController,
+            label: 'Telefono',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            onChanged: (v) {
+              Auth2.user?.mobile = v;
+              setState(() {});
+            },
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInlineField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    required ValueChanged<String> onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        prefixIcon: Icon(icon, size: 16, color: Colors.grey[600]),
+        filled: true,
+        fillColor: const Color(0xFFF5F6FA),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: myColor, width: 1.5),
+        ),
+      ),
+      onChanged: onChanged,
     );
   }
 
@@ -1439,16 +1431,30 @@ class MyCart2 extends State<MyCart> {
                     "0") ??
                 0;
 
+            // Guest check: no token = not registered
+            final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
+
             return ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: addressMissing ? Colors.orange : myColor,
+                backgroundColor: isGuest ? Colors.orange : (addressMissing ? Colors.orange : myColor),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              onPressed: addressMissing
+              onPressed: isGuest
+                  ? () async {
+                      // Guest must register first
+                      final registered = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(builder: (_) => const QuickRegister()),
+                      );
+                      if (registered == true && mounted) {
+                        setState(() {});
+                      }
+                    }
+                  : addressMissing
                   ? () async {
                       // Open AddAddress page to fill missing info
                       await Navigator.push(
@@ -1475,16 +1481,44 @@ class MyCart2 extends State<MyCart> {
                   return;
                 }
 
-                // --- Proceed with payment ---
-                // Google Pay
-                if (paymentMethod == "4" && Platform.isAndroid) {
-                  await _showGooglePaySheet(cart, total);
+                // --- Guest check before payment ---
+                if (MyApp2.token == null || MyApp2.token!.isEmpty) {
+                  final registered = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const QuickRegister()),
+                  );
+                  if (registered == true && mounted) setState(() {});
                   return;
                 }
 
-                // Apple Pay
+                // --- Proceed with payment ---
+                // Google Pay → same Stripe flow (Stripe Checkout supports Google Pay natively)
+                if (paymentMethod == "4" && Platform.isAndroid) {
+                  final providerId = (cart.cart?.cart_items != null &&
+                          cart.cart!.cart_items!.isNotEmpty)
+                      ? cart.cart!.cart_items!.first.provider_id
+                      : null;
+                  final transactionId = await _payWithStripe(
+                      total: total, providerId: providerId);
+                  if (transactionId == null) return;
+                  _googlePayTransactionId = transactionId;
+                  Progress.progressDialogue(context);
+                  await OrderPlaceButton(cart, context);
+                  return;
+                }
+
+                // Apple Pay → same Stripe flow (Stripe Checkout supports Apple Pay natively)
                 if (paymentMethod == "3" && Platform.isIOS) {
-                  await _showApplePaySheet(cart, total);
+                  final providerId = (cart.cart?.cart_items != null &&
+                          cart.cart!.cart_items!.isNotEmpty)
+                      ? cart.cart!.cart_items!.first.provider_id
+                      : null;
+                  final transactionId = await _payWithStripe(
+                      total: total, providerId: providerId);
+                  if (transactionId == null) return;
+                  _applePayTransactionId = transactionId;
+                  Progress.progressDialogue(context);
+                  await OrderPlaceButton(cart, context);
                   return;
                 }
 
@@ -1509,11 +1543,18 @@ class MyCart2 extends State<MyCart> {
                     try {
                       Navigator.pop(context);
                     } catch (_) {}
+                  } finally {
+                    // Reset state after PayPal/Cash attempt
+                    if (mounted) {
+                      setState(() {
+                        inClicked = true;
+                      });
+                    }
                   }
                 }
               },
               child: Text(
-                addressMissing ? 'Completa dati consegna' : 'Fai ordine',
+                isGuest ? 'Registrati per ordinare' : (addressMissing ? 'Completa dati consegna' : 'Fai ordine'),
                 style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             );
@@ -1584,71 +1625,6 @@ class MyCart2 extends State<MyCart> {
     );
   }
 
-  /// Shows a bottom sheet with the native Apple Pay button
-  Future<void> _showApplePaySheet(CartTextProvider cart, double total) async {
-    await showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).padding.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Completa il pagamento',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text('${total.toStringAsFixed(2)} €',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: myColor)),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 48,
-                width: double.infinity,
-                child: ApplePayButton(
-                  paymentConfiguration:
-                      PaymentConfiguration.fromJsonString(applePayConfigJson),
-                  paymentItems: [
-                    PaymentItem(
-                      label: 'Totale Eboro',
-                      amount: total.toStringAsFixed(2),
-                      status: PaymentItemStatus.final_price,
-                    ),
-                  ],
-                  type: ApplePayButtonType.buy,
-                  onPaymentResult: (result) {
-                    Navigator.pop(ctx);
-                    _onApplePayResult(result, cart, total);
-                  },
-                  onError: (error) {
-                    Navigator.pop(ctx);
-                    if (error.toString().contains('paymentCanceled') ||
-                        error.toString().contains('canceled')) {
-                      // User canceled - no error message needed
-                    } else {
-                      Auth2.show('Errore Apple Pay: $error');
-                    }
-                  },
-                  loadingIndicator: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   //Stripe PaymentSheet - دفع آمن بدون إرسال بيانات الكارت مباشرة
   Future<String?> _payWithStripe(
@@ -1681,20 +1657,6 @@ class MyCart2 extends State<MyCart> {
     } catch (e) {
       Auth2.show("Errore nel pagamento: $e");
       return null;
-    }
-  }
-
-  // Handle Apple Pay result from ApplePayButton widget
-  Future<void> _onApplePayResult(
-      Map<String, dynamic> result, CartTextProvider cart, double total) async {
-    try {
-      Progress.progressDialogue(context);
-      // Apple Pay authorized - place the order
-      _applePayTransactionId = 'apple_pay_${DateTime.now().millisecondsSinceEpoch}';
-      await OrderPlaceButton(cart, context);
-    } catch (e) {
-      Progress.dimesDialog(context);
-      Auth2.show('Errore Apple Pay: $e');
     }
   }
 
@@ -2028,12 +1990,27 @@ class MyCart2 extends State<MyCart> {
 
   Future<void> OrderPlaceButton(
       CartTextProvider cart, BuildContext context) async {
-    // Block order if house or intercom is missing
+    // Block order if guest (no token) — redirect to quick registration
+    if (MyApp2.token == null || MyApp2.token!.isEmpty) {
+      try { Navigator.pop(context); } catch (_) {}
+      final registered = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const QuickRegister()),
+      );
+      if (registered == true && mounted) {
+        // Registered successfully, refresh UI
+        setState(() {});
+      }
+      return;
+    }
+
+    // Block order if house, intercom, or phone is missing
     final houseEmpty = Auth2.user?.house == null || Auth2.user!.house!.trim().isEmpty;
     final intercomEmpty = Auth2.user?.intercom == null || Auth2.user!.intercom!.trim().isEmpty;
-    if (houseEmpty || intercomEmpty) {
+    final phoneEmpty = Auth2.user?.mobile == null || Auth2.user!.mobile!.trim().isEmpty;
+    if (houseEmpty || intercomEmpty || phoneEmpty) {
       try { Navigator.pop(context); } catch (_) {}
-      Auth2.show('Compila N° civico e citofono prima di ordinare');
+      Auth2.show('Compila N° civico, citofono e telefono prima di ordinare');
       return;
     }
 
@@ -2091,9 +2068,14 @@ class MyCart2 extends State<MyCart> {
           } catch (_) {}
           Auth2.show("Errore: $e");
         } finally {
-          // إعادة تمكين الزر في حالة الفشل
+          // إعادة تمكين الزر وتنظيف transaction IDs في حالة الفشل
           if (mounted && !success) {
-            inClicked = true;
+            setState(() {
+              inClicked = true;
+              _stripeTransactionId = null;
+              _applePayTransactionId = null;
+              _googlePayTransactionId = null;
+            });
           }
         }
       } else {

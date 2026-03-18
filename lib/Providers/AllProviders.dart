@@ -842,80 +842,65 @@ class AllProvidersState extends State<AllProviders> {
 
   Future<void> _autoDetectAndConfirmLocation() async {
     try {
-      // Use saved delivery address if available, otherwise try GPS
-      LatLng myPosition;
-      final savedLat = double.tryParse(UserData.deliveryLat ?? '');
-      final savedLng = double.tryParse(UserData.deliveryLong ?? '');
-
-      if (savedLat != null && savedLng != null && savedLat != 0.0 && savedLng != 0.0) {
-        // Returning user - start on their last saved address
-        myPosition = LatLng(savedLat, savedLng);
-      } else {
-        // New user - try GPS
+      // Try GPS, fallback to default Milan location
+      Position? position;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission != LocationPermission.denied &&
+          permission != LocationPermission.deniedForever) {
         try {
-          var permission = await Geolocator.checkPermission();
-          if (permission == LocationPermission.denied) {
-            permission = await Geolocator.requestPermission();
+          final lastPos = await Geolocator.getLastKnownPosition();
+          if (lastPos != null && lastPos.latitude != 0.0 && lastPos.longitude != 0.0) {
+            position = lastPos;
+          } else {
+            position = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 10),
+            );
           }
-          if (permission == LocationPermission.denied ||
-              permission == LocationPermission.deniedForever) {
-            if (mounted) _showLocationOptions();
-            return;
-          }
-          myPosition = await _getCurrentLocation();
-        } catch (_) {
-          myPosition = LatLng(
-            double.tryParse(Auth2.user?.activeLat ?? Auth2.user?.lat ?? '') ?? 45.4642,
-            double.tryParse(Auth2.user?.activeLong ?? Auth2.user?.long ?? '') ?? 9.1900,
-          );
+        } catch (_) {}
+      }
+
+      // Default to Milan if GPS unavailable
+      final double lat = position?.latitude ?? 45.4642;
+      final double lng = position?.longitude ?? 9.1900;
+
+      if (!mounted) return;
+
+      // Reverse geocode to get address
+      String address = '';
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+        if (placemarks.isNotEmpty) {
+          address = _composeAddressFromPlacemark(placemarks.first);
         }
+      } catch (_) {}
+
+      if (address.isEmpty) {
+        address = '$lat, $lng';
       }
 
       if (!mounted) return;
 
-      // Open interactive map picker with live map, autocomplete & zoom
-      final result = await showGoogleMapLocationPicker(
-        pinWidget: Icon(Icons.location_pin, color: myColor, size: 50),
-        pinColor: myColor,
-        context: context,
-        addressPlaceHolder: "Seleziona qui",
-        addressTitle: "Indirizzo : ",
-        apiKey: "AIzaSyAB9JpHw1iVlBH3izJJfsuPGKOqxLsXSpk",
-        appBarTitle: "Dove vuoi ricevere il tuo ordine?",
-        confirmButtonColor: myColor,
-        confirmButtonText: "Conferma",
-        confirmButtonTextColor: Colors.white,
-        country: "it",
-        language: MyApp2.apiLang.toString(),
-        searchHint: "Cerca indirizzo...",
-        initialLocation: myPosition,
-        myLocation: myPosition,
-      );
+      final latStr = lat.toString();
+      final lngStr = lng.toString();
 
-      if (result == null || !mounted) return;
-
-      // Save the selected address
-      UserData.deliveryAddress = result.address;
-      UserData.deliveryLat = result.latlng.latitude.toString();
-      UserData.deliveryLong = result.latlng.longitude.toString();
+      // Save the auto-detected address
+      UserData.deliveryAddress = address;
+      UserData.deliveryLat = latStr;
+      UserData.deliveryLong = lngStr;
       UserData.saveDeliveryAddress();
 
-      Auth2.user?.lat = result.latlng.latitude.toString();
-      Auth2.user?.long = result.latlng.longitude.toString();
-      _gpsAddress = result.address;
+      Auth2.user?.lat = latStr;
+      Auth2.user?.long = lngStr;
+      _gpsAddress = address;
 
-      _saveToAddressHistory(
-        result.address,
-        result.latlng.latitude.toString(),
-        result.latlng.longitude.toString(),
-      );
+      _saveToAddressHistory(address, latStr, lngStr);
 
       // Update server coordinates
-      Auth2.updateDeliveryCoordinates(
-        result.latlng.latitude.toString(),
-        result.latlng.longitude.toString(),
-        context,
-      );
+      Auth2.updateDeliveryCoordinates(latStr, lngStr, context);
 
       // Reload providers with new location
       Provider2.clearProvidersCache();

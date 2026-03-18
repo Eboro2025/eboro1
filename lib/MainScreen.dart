@@ -19,6 +19,15 @@ import 'package:eboro/main.dart';
 // All app initialization (MyApp, MyHomePage, MyApp2) is in main.dart
 // This file only contains MainScreen (bottom navigation tabs)
 
+class _NavItemData {
+  final int index;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final int badgeCount;
+  _NavItemData(this.index, this.icon, this.activeIcon, this.label, this.badgeCount);
+}
+
 // -------- Main Tabs (Negozio / Ordini / Favorite / Account) --------
 
 class MainScreen extends StatefulWidget {
@@ -260,7 +269,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           break;
       }
     }
-    return _builtPages[index]!;
+    return _builtPages[index] ?? const SizedBox.shrink();
   }
 
   @override
@@ -307,52 +316,202 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 }).length ??
                 0;
 
-            return BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              currentIndex: _currentIndex,
-              selectedItemColor: myColor,
-              unselectedItemColor: Colors.black54,
-              onTap: (index) => setState(() {
-                _visitedTabs.add(index);
-                _currentIndex = index;
-                _videoVisible.value = (index == 2);
-              }),
-              items: [
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.storefront),
-                  label: AppLocalizations.of(context)?.translate("store") ??
-                      "Negozio",
+            final navItems = [
+              _NavItemData(0, Icons.home_outlined, Icons.home_rounded, "Home", 0),
+              _NavItemData(1, Icons.shopping_bag_outlined, Icons.shopping_bag,
+                  AppLocalizations.of(context)?.translate("myorders") ?? "I miei ordini", activeCount),
+              _NavItemData(2, Icons.videocam_outlined, Icons.videocam, "Video", 0),
+              _NavItemData(3, Icons.person_outline, Icons.person,
+                  AppLocalizations.of(context)?.translate("myprofile") ?? "Il mio profilo", 0),
+            ];
+
+            return SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 90,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    // White bar background
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 70,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, -3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: navItems.map((item) {
+                            if (item.index == _currentIndex) {
+                              // Placeholder space for the elevated active item
+                              return SizedBox(
+                                width: 60,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    const SizedBox(height: 24),
+                                    Text(
+                                      item.label,
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: myColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              return _buildNavItem(item.index, item.icon, item.activeIcon, item.label, item.badgeCount);
+                            }
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    // Elevated active button (above the bar)
+                    Positioned(
+                      bottom: 45,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: navItems.map((item) {
+                          if (item.index == _currentIndex) {
+                            return GestureDetector(
+                              onTap: () => setState(() {
+                                _visitedTabs.add(item.index);
+                                _currentIndex = item.index;
+                                _videoVisible.value = (item.index == 2);
+                              }),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      color: myColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: myColor,
+                                        width: 2.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: myColor.withValues(alpha: 0.3),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      item.activeIcon,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  if (item.badgeCount > 0)
+                                    Positioned(
+                                      top: -2,
+                                      right: -2,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFC12732),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          item.badgeCount.toString(),
+                                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            return const SizedBox(width: 58, height: 58);
+                          }
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
-                BottomNavigationBarItem(
-                  icon: activeCount > 0
-                      ? badges.Badge(
-                          position: BadgePosition.topEnd(top: -5, end: -10),
-                          badgeContent: Text(
-                            activeCount.toString(),
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 10),
-                          ),
-                          badgeStyle: const badges.BadgeStyle(
-                            badgeColor: Color(0xFFC12732),
-                          ),
-                          child: const Icon(Icons.shopping_bag_outlined),
-                        )
-                      : const Icon(Icons.shopping_bag_outlined),
-                  label: AppLocalizations.of(context)?.translate("myorders") ??
-                      "Ordini",
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.videocam_outlined),
-                  label: "Video",
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.person_outline),
-                  label: AppLocalizations.of(context)?.translate("myprofile") ??
-                      "Account",
-                ),
-              ],
+              ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label, int badgeCount) {
+    final bool isActive = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _visitedTabs.add(index);
+        _currentIndex = index;
+        _videoVisible.value = (index == 2);
+      }),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 60,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  isActive ? activeIcon : icon,
+                  color: isActive ? myColor : Colors.grey.shade400,
+                  size: 24,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -8,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFC12732),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        badgeCount.toString(),
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                color: isActive ? myColor : Colors.grey.shade400,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
