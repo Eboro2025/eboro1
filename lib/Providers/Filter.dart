@@ -189,7 +189,6 @@ class Filter2 extends State <Filter> {
             vType.remove(order2[i]);
           });
         }
-        print(vType);
       },));
     }
     return tiles;
@@ -223,7 +222,6 @@ class Filter2 extends State <Filter> {
             vType.remove(offers2[i]);
           });
         }
-        print(vType);
       },));
     }
     return tiles;
@@ -245,7 +243,7 @@ class Filter2 extends State <Filter> {
                 type_id2.remove(item.id);
               }
             });
-            print(type_id2);
+
           },
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16.0),

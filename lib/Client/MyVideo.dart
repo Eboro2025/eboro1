@@ -132,7 +132,6 @@ class _MyVideoState extends State<MyVideo> {
           .where((p) => !p.outOfDeliveryRange)
           .map((p) => p.id)
           .toSet();
-      print('DEBUG VIDEO filter: inRangeIds=$inRangeIds');
       videos = _allVideos
           .where((v) => inRangeIds.contains(v.providerId))
           .toList();
@@ -169,7 +168,6 @@ class _MyVideoState extends State<MyVideo> {
     final uri = Uri.tryParse(url);
     if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return;
 
-    print('VIDEO INIT [$index]: attempting $url');
     // ignore: deprecated_member_use
     final controller = VideoPlayerController.network(url);
     _controllers[index] = controller;
@@ -184,10 +182,8 @@ class _MyVideoState extends State<MyVideo> {
       if (index == _currentPage && (widget.isVisible?.value ?? true)) {
         controller.play();
       }
-      print('VIDEO INIT SUCCESS [$index]: ${controller.value.duration}');
       if (mounted) setState(() {});
     }).catchError((e) {
-      print('VIDEO INIT ERROR [$index]: $e  URL: $url');
       _failedIndices.add(index);
       _disposeController(index);
       if (mounted) setState(() {});

@@ -72,7 +72,6 @@ class ProviderController with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_deliveryCacheKey);
       await prefs.remove(_deliveryLatLngKey);
-      print('DEBUG: Delivery cache cleared');
     } catch (_) {}
   }
 

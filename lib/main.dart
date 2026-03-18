@@ -228,26 +228,24 @@ class MyApp2 extends State<MyHomePage> {
 
   startTime() async {
     try {
-      print('DEBUG: startTime() called');
+
       prefs = await SharedPreferences.getInstance();
       apiLang = prefs.getString('apiLang');
       token = prefs.getString('token');
       firstTime = prefs.getString('firstTime');
       type = prefs.getString('type');
-      print('DEBUG: token=$token, apiLang=$apiLang');
+
 
       await getlangValues();
-      print('DEBUG: getlangValues done');
 
       // استخدام Future.microtask بدلاً من Timer لتحسين الأداء
       Future.microtask(() {
         if (mounted) {
-          print('DEBUG: calling checkInternetState');
+
           checkInternetState();
         }
       });
     } catch (e) {
-      print('DEBUG: Error in startTime: $e');
       if (mounted) {
         checkInternetState();
       }
@@ -312,10 +310,8 @@ class MyApp2 extends State<MyHomePage> {
 
       if (!mounted) return message;
 
-      print('DEBUG: checkState response status=${response.statusCode}');
       if (response.statusCode == 200) {
         Map A = json.decode(response.body);
-        print('DEBUG: checkState body=$A');
 
         // Force update check
         String? minVersion = A['min_version'];
@@ -323,7 +319,6 @@ class MyApp2 extends State<MyHomePage> {
           try {
             final packageInfo = await PackageInfo.fromPlatform();
             if (_isVersionOlder(packageInfo.version, minVersion)) {
-              print('DEBUG: force update required');
               if (mounted) _showForceUpdateDialog();
               return message;
             }
@@ -331,7 +326,6 @@ class MyApp2 extends State<MyHomePage> {
         }
 
         String? state = A['state'];
-        print('DEBUG: state=$state');
         if (state == 'open') {
           await checkAuth();
         } else {
@@ -357,37 +351,31 @@ class MyApp2 extends State<MyHomePage> {
   }
 
   Future<void> checkAuth() async {
-    print('DEBUG: checkAuth called, token=$token');
     if (!mounted) return;
 
     if (token == null) {
-      print('DEBUG: no token, going to login');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),
       );
     } else {
       try {
-        print('DEBUG: calling getUserDetails');
         final value = await Auth2.getUserDetails(context).timeout(
           const Duration(seconds: 8),
           onTimeout: () => null,
         );
-        print('DEBUG: getUserDetails done, name=${value?.name}');
         if (!mounted) return;
 
         if (value?.name?.isNotEmpty ?? false) {
-          print('DEBUG: calling go()');
           await go();
         } else {
-          print('DEBUG: name is empty or null, going to login');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => LoginScreen()),
           );
         }
       } catch (e) {
-        print('DEBUG: Error in checkAuth: $e');
+        // Auth check failed
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -400,11 +388,7 @@ class MyApp2 extends State<MyHomePage> {
 
   Future<void> go() async {
     try {
-      print('DEBUG: go() called');
-      // Always get current GPS location on app open
-      print('DEBUG: calling setLocationFromGPS');
       await Auth2.setLocationFromGPS();
-      print('DEBUG: setLocationFromGPS done');
 
       final order = Provider.of<UserOrderProvider>(context, listen: false);
       final providerController =

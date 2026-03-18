@@ -814,10 +814,7 @@ class Auth2 extends State<Auth> {
   static Future<void> setLocationFromGPS() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('GPS: Location services disabled');
-        return;
-      }
+      if (!serviceEnabled) return;
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -825,19 +822,16 @@ class Auth2 extends State<Auth> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        print('GPS: Permission denied');
         return;
       }
 
       Position? pos = await Geolocator.getLastKnownPosition();
-      print('GPS: lastKnown = ${pos?.latitude}, ${pos?.longitude}');
 
       if (pos == null || (pos.latitude == 0.0 && pos.longitude == 0.0)) {
         pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.medium,
           timeLimit: const Duration(seconds: 10),
         );
-        print('GPS: currentPosition = ${pos.latitude}, ${pos.longitude}');
       }
 
       final lat = pos.latitude.toString();
@@ -861,15 +855,10 @@ class Auth2 extends State<Auth> {
           final address = parts.join(', ');
           if (address.isNotEmpty) {
             UserData.deliveryAddress = address;
-            print('GPS: address resolved = $address');
           }
         }
-      } catch (e) {
-        print('GPS: geocode error = $e');
-      }
-    } catch (e) {
-      print('GPS: error = $e');
-    }
+      } catch (_) {}
+    } catch (_) {}
   }
 
   // -------------------- EDIT USER DETAILS --------------------

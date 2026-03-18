@@ -58,9 +58,6 @@ class ForgotPasswordState extends State<ForgotPassword> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      print('sendResetCode status: ${response.statusCode}');
-      print('sendResetCode body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> result = json.decode(response.body);
         if (result['status'] == 'success') {
@@ -83,7 +80,6 @@ class ForgotPasswordState extends State<ForgotPassword> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      print('sendResetCode error: $e');
       Auth2.show('Connessione al server fallita. Controlla la connessione internet.');
     }
   }

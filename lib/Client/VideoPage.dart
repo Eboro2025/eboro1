@@ -105,7 +105,6 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
         vpc.play();
       }
     }).catchError((e) {
-      print('Video $index init error: $e');
     });
   }
 

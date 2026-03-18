@@ -108,9 +108,7 @@ class MapScreenState extends State<MapScreen> {
         }
         _shortName = number.isNotEmpty ? '$street, $number' : street;
       });
-    } catch (e) {
-      print(e);
-    }
+    } catch (_) {}
 
     if (mounted) {
       setState(() {

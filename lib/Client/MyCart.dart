@@ -97,9 +97,6 @@ class MyCart2 extends State<MyCart> {
   final TextEditingController _cvvController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _promoController = TextEditingController();
-  final TextEditingController _cartHouseController = TextEditingController();
-  final TextEditingController _cartIntercomController = TextEditingController();
-  final TextEditingController _cartPhoneController = TextEditingController();
 
   DateTime order_at = DateTime.now();
   String selectedTime = 'Now';
@@ -127,9 +124,6 @@ class MyCart2 extends State<MyCart> {
   @override
   void initState() {
     super.initState();
-    _cartHouseController.text = Auth2.user?.house ?? '';
-    _cartIntercomController.text = Auth2.user?.intercom ?? '';
-    _cartPhoneController.text = Auth2.user?.mobile ?? '';
 
     // Initialize Pay client (سريع)
     _initializePayment();
@@ -547,82 +541,11 @@ class MyCart2 extends State<MyCart> {
               color: Colors.grey[800],
             ),
           ),
-          const SizedBox(height: 10),
-          // Inline fields for N° Civico, Citofono, Telefono
-          Row(
-            children: [
-              Expanded(
-                child: _buildInlineField(
-                  controller: _cartHouseController,
-                  label: 'N° Civico',
-                  icon: Icons.tag_rounded,
-                  onChanged: (v) {
-                    Auth2.user?.house = v;
-                    setState(() {});
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildInlineField(
-                  controller: _cartIntercomController,
-                  label: 'Citofono',
-                  icon: Icons.doorbell_outlined,
-                  onChanged: (v) {
-                    Auth2.user?.intercom = v;
-                    setState(() {});
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildInlineField(
-            controller: _cartPhoneController,
-            label: 'Telefono',
-            icon: Icons.phone_outlined,
-            keyboardType: TextInputType.phone,
-            onChanged: (v) {
-              Auth2.user?.mobile = v;
-              setState(() {});
-            },
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildInlineField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    required ValueChanged<String> onChanged,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        prefixIcon: Icon(icon, size: 16, color: Colors.grey[600]),
-        filled: true,
-        fillColor: const Color(0xFFF5F6FA),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: myColor, width: 1.5),
-        ),
-      ),
-      onChanged: onChanged,
-    );
-  }
 
   Widget _buildPaymentCard() {
     final provider = Provider.of<ProviderController>(context, listen: false);
@@ -631,8 +554,6 @@ class MyCart2 extends State<MyCart> {
         ?.where((e) => e.id == cart.cart?.cart_items?.firstOrNull?.provider_id)
         .firstOrNull;
     final bool acceptsCash = currentProvider?.acceptsCash == true;
-
-    print('DEBUG CASH: cartProviderId=${cart.cart?.cart_items?.firstOrNull?.provider_id} currentProvider=${currentProvider?.id} name=${currentProvider?.name} accept_cash=${currentProvider?.accept_cash} acceptsCash=$acceptsCash providersCount=${provider.providers?.length}');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -1411,13 +1332,7 @@ class MyCart2 extends State<MyCart> {
             ),
           ),
           Builder(builder: (_) {
-            final houseEmpty =
-                Auth2.user?.house == null || Auth2.user!.house!.trim().isEmpty;
-            final intercomEmpty = Auth2.user?.intercom == null ||
-                Auth2.user!.intercom!.trim().isEmpty;
-            final phoneEmpty = Auth2.user?.mobile == null ||
-                Auth2.user!.mobile!.trim().isEmpty;
-            final addressMissing = houseEmpty || intercomEmpty || phoneEmpty;
+            final addressMissing = false;
 
             final minOrder = double.tryParse(provider.providers
                         ?.firstWhere(
@@ -2004,15 +1919,6 @@ class MyCart2 extends State<MyCart> {
       return;
     }
 
-    // Block order if house, intercom, or phone is missing
-    final houseEmpty = Auth2.user?.house == null || Auth2.user!.house!.trim().isEmpty;
-    final intercomEmpty = Auth2.user?.intercom == null || Auth2.user!.intercom!.trim().isEmpty;
-    final phoneEmpty = Auth2.user?.mobile == null || Auth2.user!.mobile!.trim().isEmpty;
-    if (houseEmpty || intercomEmpty || phoneEmpty) {
-      try { Navigator.pop(context); } catch (_) {}
-      Auth2.show('Compila N° civico, citofono e telefono prima di ordinare');
-      return;
-    }
 
     // Check if restaurant is open
     final providerController =

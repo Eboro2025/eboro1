@@ -932,7 +932,7 @@ class _LoginScreenState extends State<LoginScreen> {
           final savedEmail = email != null ? email : await loadFromStorage('apple_email');
           final savedName = fullName.isNotEmpty ? fullName : await loadFromStorage('apple_fullname');
 
-          print('DEBUG APPLE: email=$email savedEmail=$savedEmail savedName=$savedName token=${token.substring(0, 20)}...');
+          // Apple Sign In credentials retrieved
 
           if (email != null) await saveToStorage('apple_email', email);
           if (fullName.isNotEmpty) await saveToStorage('apple_fullname', fullName);

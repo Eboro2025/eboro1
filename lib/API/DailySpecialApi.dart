@@ -66,7 +66,6 @@ class DailySpecialApi {
         },
       ).timeout(const Duration(seconds: 5));
 
-      print('🍽️ [DailySpecial] provider-ids status=${response.statusCode} body=${response.body}');
       if (response.statusCode == 200) {
         var jsonData = json.decode(response.body);
         List<int> ids = [];
@@ -77,13 +76,11 @@ class DailySpecialApi {
           }
         }
 
-        print('🍽️ [DailySpecial] Got ${ids.length} provider IDs: $ids');
         return ids;
       } else {
         return [];
       }
     } catch (e) {
-      print('🍽️ [DailySpecial] ERROR loading provider IDs: $e');
       return [];
     }
   }

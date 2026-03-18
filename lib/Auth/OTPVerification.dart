@@ -142,9 +142,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      print('firebase-phone-login status: ${response.statusCode}');
-      print('firebase-phone-login body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> result = json.decode(response.body);
         if (result['status'] == 'success' && result['data'] != null) {
@@ -170,7 +167,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      print('verifyOTP Firebase error: ${e.message}');
       if (e.code == 'invalid-verification-code') {
         Auth2.show('Codice OTP non valido');
       } else {
@@ -179,7 +175,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      print('verifyOTP error: $e');
       Auth2.show('Connessione fallita. Controlla la connessione internet.');
     }
   }

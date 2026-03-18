@@ -25,6 +25,10 @@ Runner/GeneratedPluginRegistrant.*
 # Windows
 /.windows/
 
+# Duplicates
+client1 copia/
+eboro1/
+
 # Misc
 .DS_Store
 *.log

@@ -76,9 +76,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      print('resetPassword status: ${response.statusCode}');
-      print('resetPassword body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> result = json.decode(response.body);
         if (result['status'] == 'success') {
@@ -95,7 +92,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      print('resetPassword error: $e');
       Auth2.show('Connessione al server fallita. Controlla la connessione internet.');
     }
   }

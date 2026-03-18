@@ -46,17 +46,13 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      print('Phone login response: ${response.statusCode} ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final result = json.decode(response.body);
         if (result['data'] != null && result['data']['token'] != null) {
           MyApp2.prefs.setString('firstTime', 'firstTime');
           MyApp2.token = "Bearer ${result['data']['token']}";
-          print('Token set, calling getUserDetails...');
           await Auth2.getUserDetails(context);
-          print('getUserDetails done, calling checkType...');
           await Auth2.checkType(MyApp2.token!, context);
-          print('checkType done');
         } else {
           Auth2.show(result['message']?.toString() ?? 'Errore durante l\'accesso');
         }
@@ -64,7 +60,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
         Auth2.show('Errore durante l\'accesso. Riprova.');
       }
     } catch (e) {
-      print('Phone login error: $e');
       if (!mounted) return;
       setState(() => _isLoading = false);
       Auth2.show('Errore: $e');
