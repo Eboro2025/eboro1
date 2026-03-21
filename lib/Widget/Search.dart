@@ -123,7 +123,6 @@ class Search2 extends State<Search> {
                         });
 
                         provider.updateScreen(filteredProviders);
-                        // print("${provider.filteredProviders?.length} asdsad");
                       } else {
                         type_id2.remove(item.id);
 

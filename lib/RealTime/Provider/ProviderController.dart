@@ -92,13 +92,14 @@ class ProviderController with ChangeNotifier {
       });
       filteredProviders = providers;
 
+      // تحميل المفضلات من الكاش فوراً
+      await loadFavoritesFromCache();
+
       // تحميل بيانات التوصيل من الـ cache لو العنوان ما اتغيرش
       final deliveryRestored = await _loadDeliveryFromCache();
 
       // لو الكاش ما رجع بيانات توصيل (عنوان مختلف)، نخفي المحلات مؤقتاً
-      // Guest: never hide providers (no delivery fetch will happen)
-      final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
-      if (!deliveryRestored && providers != null && !isGuest) {
+      if (!deliveryRestored && providers != null) {
         final hasLocation = Auth2.user?.activeLat != null &&
             Auth2.user!.activeLat!.isNotEmpty &&
             Auth2.user?.activeLong != null &&
@@ -170,9 +171,6 @@ class ProviderController with ChangeNotifier {
   /// تحميل بيانات التوصيل من الـ cache لو العنوان نفسه
   Future<bool> _loadDeliveryFromCache() async {
     try {
-      // Guest: skip delivery cache (no delivery data to restore)
-      if (MyApp2.token == null || MyApp2.token!.isEmpty) return false;
-
       // لو المستخدم ما حدد موقعه، ما نحمل cache التوصيل عشان ما نخفي المحلات
       final latStr = Auth2.user?.activeLat;
       final longStr = Auth2.user?.activeLong;
@@ -238,6 +236,20 @@ class ProviderController with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Load favorites from local cache (instant, no API)
+  Future<bool> loadFavoritesFromCache() async {
+    if (Auth2.user?.email == "info@eboro.com") return false;
+    try {
+      final cached = await Favorite2.loadFromCache();
+      if (cached != null && cached.isNotEmpty) {
+        Favorites = cached;
+        notifyListeners();
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /// Refresh only favorites without reloading providers
   Future<void> refreshFavorites() async {
     if (Auth2.user?.email != null && Auth2.user!.email != "info@eboro.com") {
@@ -259,6 +271,9 @@ class ProviderController with ChangeNotifier {
       Favorites!.add(FavoriteData(id: 0, provider: provider));
     }
     notifyListeners();
+
+    // Save to local cache immediately
+    Favorite2.saveToCache(Favorites);
 
     // API call
     await Favorite2.removeFromFavorite(provider.id, context);
@@ -303,19 +318,18 @@ class ProviderController with ChangeNotifier {
 
       _saveToCache(providers);
 
-      // مسح بيانات التوصيل القديمة - نخفي المحلات لحد ما نحسب المسافة الجديدة
+      // مسح بيانات التوصيل القديمة
+      final isGuest = Auth2.user?.email == "info@eboro.com";
       if (providers != null) {
-        final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
-        final hasLocation = !isGuest &&
-            Auth2.user?.activeLat != null &&
+        final hasLocation = Auth2.user?.activeLat != null &&
             Auth2.user!.activeLat!.isNotEmpty &&
             Auth2.user?.activeLong != null &&
             Auth2.user!.activeLong!.isNotEmpty;
         for (final p in providers!) {
           p.Delivery = null;
-          // Guest: show all providers without delivery filtering
-          // لو عنده موقع وtoken، نخفي المحلات مؤقتاً لحد ما نحسب المسافة
-          p.outOfDeliveryRange = hasLocation;
+          // Guest: عرض كل المحلات فوراً بدون إخفاء
+          // Logged in: إخفاء لحد ما نحسب المسافة
+          p.outOfDeliveryRange = isGuest ? false : hasLocation;
         }
       }
 
@@ -339,14 +353,7 @@ class ProviderController with ChangeNotifier {
     final list = providers;
     if (list == null || list.isEmpty) return;
 
-    // Guest: skip delivery calculation, show all providers (with -- fees)
-    if (MyApp2.token == null || MyApp2.token!.isEmpty) {
-      for (final p in list) {
-        p.outOfDeliveryRange = false;
-      }
-      notifyListeners();
-      return;
-    }
+    // Guest or logged-in: calculate delivery for all users with a valid location
 
     // لو المستخدم ما حدد موقعه، ما نحسب التوصيل ونعرض كل المحلات
     final latStr = Auth2.user?.activeLat;
@@ -365,6 +372,7 @@ class ProviderController with ChangeNotifier {
     for (var i = 0; i < toFetch.length; i += batchSize) {
       if (_deliveryFetchGeneration != currentGeneration) return;
 
+      final isGuest = Auth2.user?.email == "info@eboro.com";
       final batch = toFetch.skip(i).take(batchSize).toList();
       await Future.wait(batch.map((p) async {
         if (_deliveryFetchGeneration != currentGeneration) return;
@@ -375,7 +383,8 @@ class ProviderController with ChangeNotifier {
             p.Delivery = result;
             p.outOfDeliveryRange = false;
           } else {
-            p.outOfDeliveryRange = true;
+            // Guest: ما نخفي المحل لو التوصيل مش متاح
+            p.outOfDeliveryRange = isGuest ? false : true;
           }
         } catch (_) {}
       }));
@@ -432,17 +441,16 @@ class ProviderController with ChangeNotifier {
 
       _saveToCache(providers);
 
-      // مسح بيانات التوصيل القديمة - نخفي المحلات لحد ما نحسب المسافة الجديدة
-      // Guest: never hide providers (no delivery fetch will happen)
-      final isGuest = MyApp2.token == null || MyApp2.token!.isEmpty;
-      final hasLocation = !isGuest &&
-          Auth2.user?.activeLat != null &&
+      // مسح بيانات التوصيل القديمة
+      final isGuest = Auth2.user?.email == "info@eboro.com";
+      final hasLocation = Auth2.user?.activeLat != null &&
           Auth2.user!.activeLat!.isNotEmpty &&
           Auth2.user?.activeLong != null &&
           Auth2.user!.activeLong!.isNotEmpty;
       for (final p in providers!) {
         p.Delivery = null;
-        p.outOfDeliveryRange = hasLocation;
+        // Guest: عرض كل المحلات فوراً بدون إخفاء
+        p.outOfDeliveryRange = isGuest ? false : hasLocation;
       }
 
       await _loadDeliveryFromCache();

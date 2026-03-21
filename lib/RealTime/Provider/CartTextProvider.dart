@@ -59,7 +59,7 @@ class CartTextProvider with ChangeNotifier {
       await Cart().addToCart(extras, item, qty);
       await updateCart();
     } catch (e) {
-      debugPrint('❌ CartTextProvider.addCartItem error: $e');
+      // addCartItem error
     } finally {
       _isProcessing = false;
       if (dialogShown) {
@@ -148,7 +148,7 @@ class CartTextProvider with ChangeNotifier {
       await Cart().deleteCartItem(i, context);
       await updateCart();
     } catch (e) {
-      debugPrint('❌ CartTextProvider.deleteCartItem error: $e');
+      // deleteCartItem error
     } finally {
       _isProcessing = false;
       if (dialogShown) {

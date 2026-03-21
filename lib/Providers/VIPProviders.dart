@@ -20,7 +20,6 @@ class VIPProvider2 extends State <VIPProvider> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -99,7 +98,6 @@ class VIPProvider2 extends State <VIPProvider> {
                           }
                           else
                           {
-                            // print("stop c");
                           }
                         }
                     )

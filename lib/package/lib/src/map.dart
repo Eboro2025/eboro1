@@ -178,7 +178,6 @@ class MapScreenState extends State<MapScreen> {
         headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': widget.apiKey},
         body: json.encode(body),
       );
-      print('SEARCH NEW API: status=${response.statusCode} body=${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}');
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         if (mounted) {
@@ -191,11 +190,9 @@ class MapScreenState extends State<MapScreen> {
           });
         }
       } else {
-        print('SEARCH NEW API FAILED: ${response.statusCode}, trying fallback...');
         if (mounted) _getSearchSuggestionsFallback(input);
       }
     } catch (e) {
-      print('SEARCH NEW API ERROR: $e, trying fallback...');
       if (mounted) _getSearchSuggestionsFallback(input);
     }
   }
@@ -211,7 +208,6 @@ class MapScreenState extends State<MapScreen> {
     }
     try {
       var response = await http.get(Uri.parse(request));
-      print('SEARCH FALLBACK API: status=${response.statusCode} body=${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}');
       if (response.statusCode == 200 && mounted) {
         var data = json.decode(response.body);
         setState(() {
@@ -227,7 +223,6 @@ class MapScreenState extends State<MapScreen> {
         });
       }
     } catch (e) {
-      print('SEARCH FALLBACK ERROR: $e');
     }
   }
 
@@ -250,7 +245,6 @@ class MapScreenState extends State<MapScreen> {
       final GoogleMapController controller = await _controller.future;
       controller.animateCamera(CameraUpdate.newCameraPosition(cPosition));
     } catch (e) {
-      print('Search result tap error: $e');
     }
   }
   @override
@@ -649,7 +643,6 @@ class MapScreenState extends State<MapScreen> {
 
     if (response.statusCode == 200) {
       var res = json.decode(response.body);
-      print(res);
       return res['result']['geometry']['location'];
     } else {
       throw Exception('Failed to load predictions');

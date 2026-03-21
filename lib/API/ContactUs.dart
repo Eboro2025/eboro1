@@ -50,7 +50,6 @@ class ContactUsAPI {
         Auth2.show(A['errors'].toString());
       if(A['message'] != null)
         Auth2.show(A['message'].toString());
-      // print(response.body);
       if(A['status'] == "success") {
         getContacts(context);
       }

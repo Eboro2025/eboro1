@@ -42,14 +42,14 @@ class ClickProvider extends StatefulWidget {
 
 class ClickProvider2 extends State<ClickProvider>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  late List<Tab> tabs;
+  TabController? _tabController;
+  List<Tab> tabs = const [Tab(text: 'Menu')];
 
-  late ScrollController _scrollController;
-  late List<GlobalKey> _sectionKeys;
+  ScrollController _scrollController = ScrollController();
+  List<GlobalKey> _sectionKeys = [];
   bool _isProgrammaticScroll = false;
 
-  late Map<String, List> _productsByType;
+  Map<String, List> _productsByType = {};
 
   bool _isShowingDetails = false;
   bool _isCollapsed = false;
@@ -107,17 +107,22 @@ class ClickProvider2 extends State<ClickProvider>
     return parts.join(' ');
   }
 
+  ProviderData? _findProvider() {
+    return (Provider2.provider ?? [])
+        .cast<ProviderData>()
+        .firstWhereOrNull((element) => element.id == widget.providerID);
+  }
+
   @override
   void initState() {
     super.initState();
 
     _startTimer(60);
 
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
 
     // Tabs from product types
-    tabs = providerItem.typeInner
+    tabs = providerItem?.typeInner
             ?.map((g) => Tab(text: g.type!.type.toString()))
             .toList() ??
         [];
@@ -149,13 +154,15 @@ class ClickProvider2 extends State<ClickProvider>
 
     _productsByType = <String, List>{};
 
-    // Load products smoothly without blocking
-    _loadProductsSmooth(providerItem);
+    if (providerItem != null) {
+      // Load products smoothly without blocking
+      _loadProductsSmooth(providerItem);
 
-    _duration =
-        double.tryParse(providerItem.Delivery?.Duration?.toString() ?? '');
-    _shipping =
-        double.tryParse(providerItem.Delivery?.shipping?.toString() ?? '');
+      _duration =
+          double.tryParse(providerItem.Delivery?.Duration?.toString() ?? '');
+      _shipping =
+          double.tryParse(providerItem.Delivery?.shipping?.toString() ?? '');
+    }
   }
 
   /// Load products smoothly - show cache immediately and update in background
@@ -219,7 +226,7 @@ class ClickProvider2 extends State<ClickProvider>
       productCache.removeListener(_onCacheUpdated);
     } catch (_) {}
 
-    _tabController.dispose();
+    _tabController?.dispose();
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     timer.cancel();
@@ -233,8 +240,10 @@ class ClickProvider2 extends State<ClickProvider>
 
   // ====================== Header ======================
   Widget _buildHeader(BuildContext context) {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     final String imageUrl = (providerItem.logo ?? "").toString();
     final String rateValue = providerItem.rateRatio?.toString() ?? '0';
@@ -364,23 +373,27 @@ class ClickProvider2 extends State<ClickProvider>
         const SizedBox(height: 8),
         // Action buttons row
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildHeaderButton(
-                icon: Icons.restaurant_menu,
-                label: "Menu",
-                color: myColor,
-                onTap: () => _showDishOfTheDay(),
+              Flexible(
+                child: _buildHeaderButton(
+                  icon: Icons.restaurant_menu,
+                  label: "Menu",
+                  color: myColor,
+                  onTap: () => _showDishOfTheDay(),
+                ),
               ),
               // Spacer for logo
-              const SizedBox(width: 90),
-              _buildHeaderButton(
-                icon: Icons.share,
-                label: AppLocalizations.of(context)!.translate("share") ?? "Condividi",
-                color: myColor,
-                onTap: () => _shareStore(),
+              const Spacer(),
+              Flexible(
+                child: _buildHeaderButton(
+                  icon: Icons.share,
+                  label: AppLocalizations.of(context)!.translate("share") ?? "Condividi",
+                  color: myColor,
+                  onTap: () => _shareStore(),
+                ),
               ),
             ],
           ),
@@ -444,12 +457,15 @@ class ClickProvider2 extends State<ClickProvider>
           children: [
             Icon(icon, size: 16, color: Colors.white),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -494,8 +510,8 @@ class ClickProvider2 extends State<ClickProvider>
 
   // Call restaurant
   void _callRestaurant() {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) return;
     final phone = providerItem.user?.mobile?.toString();
     if (phone == null || phone.isEmpty || phone == '--') {
       Auth2.show('Numero di telefono non disponibile');
@@ -506,8 +522,8 @@ class ClickProvider2 extends State<ClickProvider>
 
   // Store info - comprehensive bottom sheet
   void _showStoreInfo() {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) return;
 
     // Location data
     final branch = providerItem.branch?.isNotEmpty == true
@@ -850,8 +866,8 @@ class ClickProvider2 extends State<ClickProvider>
 
   // Opening hours
   void _showOpeningHours() {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) return;
 
     showModalBottomSheet(
       context: context,
@@ -888,8 +904,8 @@ class ClickProvider2 extends State<ClickProvider>
 
   // Delivery info
   void _showDeliveryInfo() {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) return;
 
     showModalBottomSheet(
       context: context,
@@ -1083,8 +1099,8 @@ class ClickProvider2 extends State<ClickProvider>
 
   // Location
   void _showStoreLocation() {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) return;
 
     // Store address from branch or user
     final branch = providerItem.branch?.isNotEmpty == true
@@ -1167,8 +1183,8 @@ class ClickProvider2 extends State<ClickProvider>
 
   // Share store
   void _shareStore() {
-    final providerItem = Provider2.provider!
-        .firstWhere((element) => element.id == widget.providerID);
+    final providerItem = _findProvider();
+    if (providerItem == null) return;
 
     final String storeName = providerItem.name?.toString() ?? '';
     final String storeAddress = providerItem.user?.address?.toString() ?? '';
@@ -1463,7 +1479,7 @@ class ClickProvider2 extends State<ClickProvider>
     const double tabBarHeight = 46;
     final double referenceY = statusBar + kToolbarHeight + tabBarHeight + 8;
 
-    int currentIndex = _tabController.index;
+    int currentIndex = _tabController?.index ?? 0;
     int newIndex = currentIndex;
     double minDelta = double.infinity;
 
@@ -1483,8 +1499,8 @@ class ClickProvider2 extends State<ClickProvider>
       }
     }
 
-    if (newIndex != currentIndex && newIndex < _tabController.length) {
-      _tabController.animateTo(newIndex);
+    if (newIndex != currentIndex && newIndex < (_tabController?.length ?? 0)) {
+      _tabController?.animateTo(newIndex);
     }
   }
 
@@ -1679,10 +1695,11 @@ class ClickProvider2 extends State<ClickProvider>
               ),
             ),
           ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              ..._buildSections(),
-            ]),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _buildSections(),
+            ),
           ),
         ],
       ),

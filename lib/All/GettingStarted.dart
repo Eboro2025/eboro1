@@ -142,7 +142,7 @@ final slideList = [
 ];
 
 class SlideDots extends StatefulWidget {
-  bool isActive;
+  final bool isActive;
   SlideDots(this.isActive);
 
   @override

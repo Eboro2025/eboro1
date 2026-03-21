@@ -36,6 +36,9 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
   String? orderTimeText = "";
   String? orderDistance = "";
 
+  bool _mapExpanded = false;
+  bool _stepperExpanded = false;
+
   Timer? _countdownTimer;
   int? _remainingSeconds;
 
@@ -221,89 +224,215 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
       }
     }
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(steps.length * 2 - 1, (index) {
-            if (index.isOdd) {
-              final stepBefore = index ~/ 2;
-              final nextStepIndex = stepBefore + 1;
-              final nextDone = nextStepIndex <= currentStepFromStatus;
-              return Expanded(
-                child: Container(
-                  height: 2,
-                  color: nextDone ? Colors.green : Colors.grey.shade300,
-                ),
-              );
+    // Compact horizontal stepper (always visible)
+    Widget compactStepper = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(steps.length * 2 - 1, (index) {
+        if (index.isOdd) {
+          final nextStepIndex = (index ~/ 2) + 1;
+          final nextDone = nextStepIndex <= currentStepFromStatus;
+          return Expanded(
+            child: Container(
+              height: 2,
+              color: nextDone ? Colors.green : Colors.grey.shade300,
+            ),
+          );
+        }
+        final stepIndex = index ~/ 2;
+        final step = steps[stepIndex];
+        final isDone = stepIndex <= currentStepFromStatus;
+        final isActive = stepIndex == currentStepFromStatus && !_isOrderFinished(order);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 26, height: 26,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDone ? Colors.green : (isActive ? Colors.orange : Colors.grey.shade300),
+              ),
+              child: isDone
+                  ? const Icon(Icons.check, color: Colors.white, size: 15)
+                  : (isActive
+                      ? const Padding(padding: EdgeInsets.all(5), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : null),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              step.label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: isDone || isActive ? FontWeight.bold : FontWeight.normal,
+                color: isDone ? Colors.green : (isActive ? Colors.orange : Colors.grey),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        );
+      }),
+    );
+
+    // Expanded vertical timeline with full details
+    Widget expandedTimeline = Column(
+      children: List.generate(steps.length, (i) {
+        final step = steps[i];
+        final isDone = i <= currentStepFromStatus;
+        final isActive = i == currentStepFromStatus && !_isOrderFinished(order);
+        final hasTimestamp = step.timestamp != null && step.timestamp!.isNotEmpty;
+        final isLast = i == steps.length - 1;
+
+        String timeStr = '--:--';
+        String dateStr = '';
+        if (hasTimestamp) {
+          try {
+            final dt = safeDateParse(step.timestamp!).toLocal();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+            dateStr = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+          } catch (_) {}
+        }
+
+        // Calculate duration between this step and the previous
+        String durationStr = '';
+        if (i > 0 && hasTimestamp && steps[i - 1].timestamp != null && steps[i - 1].timestamp!.isNotEmpty) {
+          try {
+            final prevDt = safeDateParse(steps[i - 1].timestamp!).toLocal();
+            final thisDt = safeDateParse(step.timestamp!).toLocal();
+            final diff = thisDt.difference(prevDt);
+            if (diff.inMinutes > 0) {
+              durationStr = '${diff.inMinutes} min';
             }
+          } catch (_) {}
+        }
 
-            final stepIndex = index ~/ 2;
-            final step = steps[stepIndex];
-            // Step is done if it has a timestamp OR if the current status implies it's passed
-            final isDone = stepIndex <= currentStepFromStatus;
-            final isActive = stepIndex == currentStepFromStatus && !_isOrderFinished(order);
-            final hasTimestamp = step.timestamp != null && step.timestamp!.isNotEmpty;
-
-            String timeStr = '';
-            if (hasTimestamp) {
-              try {
-                final dt = safeDateParse(step.timestamp!).toLocal();
-                timeStr =
-                    '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-              } catch (_) {}
-            }
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isDone
-                        ? Colors.green
-                        : (isActive ? Colors.orange : Colors.grey.shade300),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timeline line + circle
+            SizedBox(
+              width: 40,
+              child: Column(
+                children: [
+                  Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDone ? Colors.green : (isActive ? Colors.orange : Colors.grey.shade300),
+                      boxShadow: isActive
+                          ? [BoxShadow(blurRadius: 6, color: Colors.orange.withOpacity(0.4))]
+                          : null,
+                    ),
+                    child: isDone
+                        ? const Icon(Icons.check, color: Colors.white, size: 15)
+                        : (isActive
+                            ? const Padding(padding: EdgeInsets.all(5), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : Center(child: Text('${i + 1}', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)))),
                   ),
-                  child: isDone
-                      ? const Icon(Icons.check, color: Colors.white, size: 15)
-                      : (isActive
-                          ? const Padding(
-                              padding: EdgeInsets.all(5),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+                  if (!isLast)
+                    Container(
+                      width: 2, height: 36,
+                      color: (i + 1 <= currentStepFromStatus) ? Colors.green : Colors.grey.shade300,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Step details
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          step.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isDone || isActive ? FontWeight.w700 : FontWeight.normal,
+                            color: isDone ? Colors.black87 : (isActive ? Colors.orange.shade800 : Colors.grey),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            if (durationStr.isNotEmpty)
+                              Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(durationStr, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                               ),
-                            )
-                          : null),
+                            Text(
+                              timeStr,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDone ? Colors.black54 : Colors.grey.shade400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (dateStr.isNotEmpty && isDone)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(dateStr, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  step.label,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight:
-                        isDone || isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isDone
-                        ? Colors.green
-                        : (isActive ? Colors.orange : Colors.grey),
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      elevation: 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => setState(() => _stepperExpanded = !_stepperExpanded),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          child: Column(
+            children: [
+              // Header with arrow
+              Row(
+                children: [
+                  Icon(Icons.timeline_rounded, size: 18, color: myColor),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('Stato ordine', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  hasTimestamp && timeStr.isNotEmpty ? timeStr : '--:--',
-                  style: TextStyle(
-                    fontSize: 8,
-                    color: isDone ? Colors.black54 : Colors.grey.shade400,
+                  AnimatedRotation(
+                    turns: _stepperExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade600),
                   ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Compact stepper always visible
+              compactStepper,
+              // Expanded timeline
+              AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: expandedTimeline,
                 ),
-              ],
-            );
-          }),
+                crossFadeState: _stepperExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 300),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1187,170 +1316,214 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
             children: [
               const SizedBox(height: 16),
 
-              // MAP
-              Container(
-                margin: const EdgeInsets.only(left: 8, right: 8, bottom: 6),
-                height: MyApp2.H! * 0.30,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      blurRadius: 6,
-                      color: Colors.black12,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: (!hasBranch || !hasDrop)
-                      ? const Center(child: Text("Map unavailable"))
-                      : GoogleMapsWidget(
-                          apiKey: "YOUR_GOOGLE_MAPS_API_KEY",
-                          key: mapsWidgetController,
-                          // Source = store always
-                          sourceLatLng: LatLng(
-                            double.parse(selfOrder.branch!.lat!),
-                            double.parse(selfOrder.branch!.long!),
-                          ),
-                          // Destination = customer address
-                          destinationLatLng: LatLng(
-                            double.parse(selfOrder.drop_lat!),
-                            double.parse(selfOrder.drop_long!),
-                          ),
-                          routeWidth: 3,
-                          sourceMarkerIconInfo: const MarkerIconInfo(
-                            assetPath: "images/icons/shop.png",
-                          ),
-                          destinationMarkerIconInfo: const MarkerIconInfo(
-                            assetPath: "images/icons/home.png",
-                          ),
-                          driverMarkerIconInfo: const MarkerIconInfo(
-                            assetPath: "images/icons/rider.png",
-                            assetMarkerSize: Size.square(125),
-                          ),
-                          // Stream for the real driver location (updates whenever the order updates)
-                          driverCoordinatesStream: _driverLocationController.stream,
-                          liteModeEnabled: false,
-                          updatePolylinesOnDriverLocUpdate: true,
-                          totalTimeCallback: (time) {
-                            final safeTime = time ?? '';
-                            setState(() => orderTimeText = safeTime);
+              // MAP + STATUS OVERLAY
+              GestureDetector(
+                onTap: () => setState(() => _mapExpanded = !_mapExpanded),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  margin: const EdgeInsets.only(left: 0, right: 0, bottom: 0),
+                  height: _mapExpanded ? MyApp2.H! * 0.60 : MyApp2.H! * 0.38,
+                  child: Stack(
+                    children: [
+                      // Google Map - full bleed
+                      Positioned.fill(
+                        child: (!hasBranch || !hasDrop)
+                            ? Container(
+                                color: Colors.grey.shade200,
+                                child: const Center(child: Text("Map unavailable")),
+                              )
+                            : GoogleMapsWidget(
+                                apiKey: "YOUR_GOOGLE_MAPS_API_KEY",
+                                key: mapsWidgetController,
+                                sourceLatLng: LatLng(
+                                  double.parse(selfOrder.branch!.lat!),
+                                  double.parse(selfOrder.branch!.long!),
+                                ),
+                                destinationLatLng: LatLng(
+                                  double.parse(selfOrder.drop_lat!),
+                                  double.parse(selfOrder.drop_long!),
+                                ),
+                                routeWidth: 4,
+                                routeColor: myColor,
+                                sourceMarkerIconInfo: const MarkerIconInfo(
+                                  assetPath: "images/icons/shop.png",
+                                  assetMarkerSize: Size.square(120),
+                                ),
+                                destinationMarkerIconInfo: const MarkerIconInfo(
+                                  assetPath: "images/icons/home.png",
+                                  assetMarkerSize: Size.square(120),
+                                ),
+                                driverMarkerIconInfo: const MarkerIconInfo(
+                                  assetPath: "images/icons/rider.png",
+                                  assetMarkerSize: Size.square(130),
+                                ),
+                                driverCoordinatesStream: _driverLocationController.stream,
+                                liteModeEnabled: false,
+                                updatePolylinesOnDriverLocUpdate: true,
+                                totalTimeCallback: (time) {
+                                  final safeTime = time ?? '';
+                                  setState(() => orderTimeText = safeTime);
+                                  if (statusLower == 'on way' || statusLower == 'on delivering') {
+                                    final sec = _convertToMinutes(safeTime) * 60;
+                                    if (sec > 0) {
+                                      _startCountdownSeconds(sec, mode: 'eta');
+                                    }
+                                  }
+                                },
+                                totalDistanceCallback: (distance) {
+                                  setState(() => orderDistance = distance);
+                                },
+                              ),
+                      ),
 
-                            // After leaving the restaurant: ETA countdown from map
-                            if (statusLower == 'on way' || statusLower == 'on delivering') {
-                              final sec = _convertToMinutes(safeTime) * 60;
-                              if (sec > 0) {
-                                _startCountdownSeconds(sec, mode: 'eta');
-                              }
-                            }
-                          },
-                          totalDistanceCallback: (distance) {
-                            setState(() => orderDistance = distance);
-                          },
-                        ),
-                ),
-              ),
-
-              // STATUS CARD
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
+                      // Gradient overlay bottom
+                      Positioned(
+                        left: 0, right: 0, bottom: 0,
+                        height: 80,
+                        child: Container(
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(21),
-                            border: Border.all(color: statusColor),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.transparent, Colors.white.withOpacity(0.95)],
+                            ),
                           ),
-                          child: Icon(_phaseIcon(phase), color: statusColor),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _phaseTitle(phase, branchName: selfOrder.branch?.name),
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _phaseSubtitle(phase, branchName: selfOrder.branch?.name),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey.shade600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                      ),
+
+                      // Status card overlay at bottom
+                      Positioned(
+                        left: 12, right: 12, bottom: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(blurRadius: 12, color: Colors.black.withOpacity(0.12), offset: const Offset(0, 4)),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Countdown MM:SS like the cashier
-                        if (_remainingSeconds != null && !finished)
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.green[200],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text("ETA",
-                                    style: TextStyle(
-                                        fontSize: 11, color: Colors.black45)),
-                                Text(
-                                  _mmss,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: statusColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: Icon(_phaseIcon(phase), color: statusColor, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _phaseTitle(phase, branchName: selfOrder.branch?.name),
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _phaseSubtitle(phase, branchName: selfOrder.branch?.name),
+                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // ETA badge
+                              if (_remainingSeconds != null && !finished)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text("ETA", style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600)),
+                                      Text(_mmss, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: statusColor)),
+                                    ],
+                                  ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Text("ETA", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
+                                      Text(etaText(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                      if (orderDistance != null && orderDistance!.isNotEmpty)
+                                        Text(orderDistance!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          )
-                        else
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text("ETA",
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                              Text(
-                                etaText(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              if (orderDistance != null &&
-                                  orderDistance!.isNotEmpty)
-                                Text(
-                                  orderDistance!,
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.grey),
-                                ),
                             ],
                           ),
-                      ],
-                    ),
+                        ),
+                      ),
+
+                      // Live tracking badge (top-left)
+                      if (!finished)
+                        Positioned(
+                          top: MediaQuery.of(context).padding.top + 8,
+                          left: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [BoxShadow(blurRadius: 8, color: Colors.black.withOpacity(0.15))],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [BoxShadow(blurRadius: 4, color: Colors.green.withOpacity(0.5))],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text("LIVE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // Expand/collapse button (top-right)
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 8,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [BoxShadow(blurRadius: 8, color: Colors.black.withOpacity(0.15))],
+                          ),
+                          child: Icon(
+                            _mapExpanded ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
+                            size: 20,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

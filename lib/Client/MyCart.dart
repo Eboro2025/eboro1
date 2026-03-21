@@ -1,8 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'package:bottom_picker/bottom_picker.dart';
 import 'package:eboro/API/Auth.dart';
-import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/API/Order.dart';
 import 'package:eboro/API/Provider.dart';
 import 'package:eboro/Client/Home.dart';
@@ -15,17 +14,16 @@ import 'package:eboro/app_localizations.dart';
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 import 'package:pay/pay.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:app_links/app_links.dart';
 
 import '../Helper/ProviderData.dart';
 import '../Helper/ProductData.dart';
 import '../Widget/Progress.dart';
-import 'package:eboro/Widget/ProductDetails.dart';
 import 'package:eboro/Widget/StripeWebViewPage.dart';
 import 'package:eboro/Widget/RecommendedSection.dart';
 
@@ -36,13 +34,13 @@ class MyCart extends StatefulWidget {
 
 class MyCart2 extends State<MyCart> {
   // Payment methods: 0 = Cash, 1 = Credit Card, 2 = PayPal, 3 = Apple Pay, 4 = Google Pay
+  // Android: only Google Pay
   String paymentMethod = "1";
   bool inClicked = true;
 
   // Apple Pay & Google Pay configurations
   late final Pay _payClient;
   bool _isApplePayAvailable = false;
-  bool _isGooglePayAvailable = false;
 
   // Google Pay config as constant for reuse
   // Apple Pay config as constant for reuse
@@ -62,7 +60,7 @@ class MyCart2 extends State<MyCart> {
   static const String googlePayConfigJson = '''{
     "provider": "google_pay",
     "data": {
-      "environment": "TEST",
+      "environment": "PRODUCTION",
       "apiVersion": 2,
       "apiVersionMinor": 0,
       "allowedPaymentMethods": [{
@@ -114,9 +112,6 @@ class MyCart2 extends State<MyCart> {
   /// Cached future for recommended products to avoid re-fetching on every rebuild
   Future<List<ProductData>?>? _recommendedFuture;
   
-  /// Cache for last recommended products to show while loading
-  List<ProductData>? _lastRecommendedProducts;
-
   /// WebViewController جاهز مسبقاً لتسريع فتح صفحة الدفع
   WebViewController? _preloadedStripeController;
   String? _preloadedStripeUrl;
@@ -160,7 +155,7 @@ class MyCart2 extends State<MyCart> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // عند الرجوع من PayPal، أعد تعيين الـ futures لتجنب عرض old data
-    debugPrint('🔵 [MyCart] didChangeDependencies - checking for fresh data');
+    // Fresh data check on dependencies change
   }
 
   /// يجهز WebViewController ويحمل صفحة Stripe مسبقاً
@@ -183,7 +178,7 @@ class MyCart2 extends State<MyCart> {
       if (total <= 0) return;
 
       final amountInCents = (total * 100).round();
-      final url = '$globalUrl/stripe/mobile-payment?amount=$amountInCents';
+      final url = '$globalUrl/stripe/mobile-payment?amount=$amountInCents&wallets=none';
 
       _preloadedStripeUrl = url;
       _preloadedStripeController = WebViewController()
@@ -194,37 +189,29 @@ class MyCart2 extends State<MyCart> {
 
   Future<void> _initializePayment() async {
     try {
-      debugPrint('[SANDBOX MODE] Payment initializing in TEST environment');
+      // Initialize payment providers
 
       // Check Apple Pay availability (iOS only)
       if (Platform.isIOS) {
-        _payClient = Pay({
-          PayProvider.apple_pay:
-              PaymentConfiguration.fromJsonString(applePayConfigJson),
-        });
-        final canPay = await _payClient.userCanPay(PayProvider.apple_pay);
-        if (mounted) {
-          setState(() {
-            _isApplePayAvailable = canPay;
+        try {
+          _payClient = Pay({
+            PayProvider.apple_pay:
+                PaymentConfiguration.fromJsonString(applePayConfigJson),
           });
+          final canPay = await _payClient.userCanPay(PayProvider.apple_pay);
+          if (mounted) {
+            setState(() {
+              _isApplePayAvailable = canPay;
+            });
+          }
+        } catch (_) {
+          // If check fails, still show Apple Pay on iOS
+          if (mounted) setState(() => _isApplePayAvailable = true);
         }
       }
 
-      // Check Google Pay availability (Android only)
-      if (Platform.isAndroid) {
-        _payClient = Pay({
-          PayProvider.google_pay:
-              PaymentConfiguration.fromJsonString(googlePayConfigJson),
-        });
-        final canPay = await _payClient.userCanPay(PayProvider.google_pay);
-        if (mounted) {
-          setState(() {
-            _isGooglePayAvailable = canPay;
-          });
-        }
-      }
-    } catch (e) {
-      // print('Error initializing payment: $e');
+    } catch (_) {
+      if (Platform.isIOS && mounted) setState(() => _isApplePayAvailable = true);
     }
   }
 
@@ -359,8 +346,6 @@ class MyCart2 extends State<MyCart> {
                 (e) => e.id == cart.cart?.cart_items?.firstOrNull?.provider_id)
             .firstOrNull;
         final deliveryData = currentProvider?.Delivery;
-        final bool acceptsCash = currentProvider?.acceptsCash == true;
-
         final double tax =
             double.tryParse(deliveryData?.Tax ?? SetLocation2.tax ?? "0") ??
                 0.0;
@@ -466,8 +451,7 @@ class MyCart2 extends State<MyCart> {
             child: const Icon(Icons.arrow_back_ios_new, size: 22),
           ),
           Text(
-            AppLocalizations.of(context)!.translate("mycart") ??
-                "Il mio carrello",
+            AppLocalizations.of(context)!.translate("mycart"),
             style: TextStyle(
               fontSize: MyApp2.fontSize18,
               fontWeight: FontWeight.bold,
@@ -594,27 +578,25 @@ class MyCart2 extends State<MyCart> {
                     value: '0',
                   ),
                 ],
-                const SizedBox(width: 6),
+                const SizedBox(width: 10),
                 _buildPaymentOption(
                   title: 'PayPal',
                   value: '2',
                 ),
-                // Apple Pay - iOS only
-                if (Platform.isIOS) ...[
-                  const SizedBox(width: 10),
-                  _buildPaymentOption(
-                    title: 'Apple Pay',
-                    value: '3',
-                    isAvailable: _isApplePayAvailable,
-                  ),
-                ],
-                // Google Pay - Android only
+                // Google Pay - Android only (uses Stripe Checkout)
                 if (Platform.isAndroid) ...[
                   const SizedBox(width: 10),
                   _buildPaymentOption(
                     title: 'Google Pay',
                     value: '4',
-                    isAvailable: _isGooglePayAvailable,
+                  ),
+                ],
+                // Apple Pay - iOS only
+                if (_isApplePayAvailable) ...[
+                  const SizedBox(width: 10),
+                  _buildPaymentOption(
+                    title: 'Apple',
+                    value: '3',
                   ),
                 ],
               ],
@@ -1360,7 +1342,6 @@ class MyCart2 extends State<MyCart> {
               ),
               onPressed: isGuest
                   ? () async {
-                      // Guest must register first
                       final registered = await Navigator.push<bool>(
                         context,
                         MaterialPageRoute(builder: (_) => const QuickRegister()),
@@ -1371,7 +1352,6 @@ class MyCart2 extends State<MyCart> {
                     }
                   : addressMissing
                   ? () async {
-                      // Open AddAddress page to fill missing info
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -1396,7 +1376,6 @@ class MyCart2 extends State<MyCart> {
                   return;
                 }
 
-                // --- Guest check before payment ---
                 if (MyApp2.token == null || MyApp2.token!.isEmpty) {
                   final registered = await Navigator.push<bool>(
                     context,
@@ -1406,32 +1385,64 @@ class MyCart2 extends State<MyCart> {
                   return;
                 }
 
-                // --- Proceed with payment ---
-                // Google Pay → same Stripe flow (Stripe Checkout supports Google Pay natively)
-                if (paymentMethod == "4" && Platform.isAndroid) {
-                  final providerId = (cart.cart?.cart_items != null &&
-                          cart.cart!.cart_items!.isNotEmpty)
-                      ? cart.cart!.cart_items!.first.provider_id
-                      : null;
-                  final transactionId = await _payWithStripe(
-                      total: total, providerId: providerId);
-                  if (transactionId == null) return;
-                  _googlePayTransactionId = transactionId;
-                  Progress.progressDialogue(context);
-                  await OrderPlaceButton(cart, context);
-                  return;
-                }
-
-                // Apple Pay → same Stripe flow (Stripe Checkout supports Apple Pay natively)
+                // Apple Pay → Stripe WebView (Apple Pay only)
                 if (paymentMethod == "3" && Platform.isIOS) {
                   final providerId = (cart.cart?.cart_items != null &&
                           cart.cart!.cart_items!.isNotEmpty)
                       ? cart.cart!.cart_items!.first.provider_id
                       : null;
                   final transactionId = await _payWithStripe(
-                      total: total, providerId: providerId);
+                      total: total, providerId: providerId, applePayOnly: true);
                   if (transactionId == null) return;
                   _applePayTransactionId = transactionId;
+                  Progress.progressDialogue(context);
+                  await OrderPlaceButton(cart, context);
+                  return;
+                }
+
+                // Google Pay → Chrome Custom Tab with GPay page
+                if (paymentMethod == "4" && Platform.isAndroid) {
+                  final amountInCents = (total * 100).round();
+                  final gpayUrl = Uri.parse('$globalUrl/stripe/gpay?amount=$amountInCents');
+
+                  final completer = Completer<String?>();
+                  final appLinks = AppLinks();
+                  StreamSubscription? linkSub;
+
+                  linkSub = appLinks.uriLinkStream.listen((Uri uri) async {
+                    if (uri.scheme == 'eboro' && uri.host == 'payment') {
+                      final sessionId = uri.queryParameters['session_id'];
+                      final pi = uri.queryParameters['pi'];
+                      if (pi != null && !completer.isCompleted) {
+                        completer.complete(pi);
+                      } else if (sessionId != null && !completer.isCompleted) {
+                        try {
+                          final resp = await http.get(Uri.parse(
+                              '$globalUrl/stripe/mobile-payment-success?session_id=$sessionId'));
+                          if (resp.statusCode == 200) {
+                            final data = json.decode(resp.body);
+                            completer.complete(data['payment_intent']);
+                          } else {
+                            completer.complete(null);
+                          }
+                        } catch (_) {
+                          completer.complete(null);
+                        }
+                      } else if (!completer.isCompleted) {
+                        completer.complete(null);
+                      }
+                      linkSub?.cancel();
+                    }
+                  });
+
+                  await launchUrl(gpayUrl, mode: LaunchMode.externalApplication);
+
+                  final transactionId = await completer.future
+                      .timeout(const Duration(minutes: 5), onTimeout: () => null);
+                  linkSub.cancel();
+
+                  if (transactionId == null || !mounted) return;
+                  _googlePayTransactionId = transactionId;
                   Progress.progressDialogue(context);
                   await OrderPlaceButton(cart, context);
                   return;
@@ -1444,7 +1455,7 @@ class MyCart2 extends State<MyCart> {
                       ? cart.cart!.cart_items!.first.provider_id
                       : null;
                   final transactionId = await _payWithStripe(
-                      total: total, providerId: providerId);
+                      total: total, providerId: providerId, disableWallets: true);
                   if (transactionId == null) return;
                   _stripeTransactionId = transactionId;
                   Progress.progressDialogue(context);
@@ -1459,7 +1470,6 @@ class MyCart2 extends State<MyCart> {
                       Navigator.pop(context);
                     } catch (_) {}
                   } finally {
-                    // Reset state after PayPal/Cash attempt
                     if (mounted) {
                       setState(() {
                         inClicked = true;
@@ -1479,74 +1489,18 @@ class MyCart2 extends State<MyCart> {
     );
   }
 
-  /// Shows a bottom sheet with the native Google Pay button
-  Future<void> _showGooglePaySheet(CartTextProvider cart, double total) async {
-    await showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).padding.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Completa il pagamento',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text('${total.toStringAsFixed(2)} €',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: myColor)),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 48,
-                width: double.infinity,
-                child: GooglePayButton(
-                  paymentConfiguration:
-                      PaymentConfiguration.fromJsonString(googlePayConfigJson),
-                  paymentItems: [
-                    PaymentItem(
-                      label: 'Totale Eboro',
-                      amount: total.toStringAsFixed(2),
-                      status: PaymentItemStatus.final_price,
-                    ),
-                  ],
-                  type: GooglePayButtonType.pay,
-                  onPaymentResult: (result) {
-                    Navigator.pop(ctx);
-                    _onGooglePayResult(result, cart, total);
-                  },
-                  onError: (error) {
-                    Navigator.pop(ctx);
-                    Auth2.show('Errore Google Pay: $error');
-                  },
-                  loadingIndicator: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-
   //Stripe PaymentSheet - دفع آمن بدون إرسال بيانات الكارت مباشرة
   Future<String?> _payWithStripe(
-      {required double total, int? providerId}) async {
+      {required double total, int? providerId, bool disableWallets = false, bool applePayOnly = false}) async {
     try {
       final amountInCents = (total * 100).round();
-      final url = '$globalUrl/stripe/mobile-payment?amount=$amountInCents';
+      String walletParam = '';
+      if (applePayOnly) {
+        walletParam = '&methods=apple_pay';
+      } else if (disableWallets) {
+        walletParam = '&wallets=none';
+      }
+      final url = '$globalUrl/stripe/mobile-payment?amount=$amountInCents$walletParam';
 
       // استخدام الـ WebViewController المجهز مسبقاً لو الـ URL متطابق
       final preloaded =
@@ -1578,50 +1532,59 @@ class MyCart2 extends State<MyCart> {
   String? _applePayTransactionId;
   String? _googlePayTransactionId;
 
-  // Handle Google Pay result from GooglePayButton widget
-  Future<void> _onGooglePayResult(
-      Map<String, dynamic> result, CartTextProvider cart, double total) async {
+
+  /// Google Pay native → get token → charge on server
+  /// Falls back to Stripe WebView if native fails
+  Future<String?> _payWithNativeGpay({required int amountInCents}) async {
+    // Try native Google Pay first
     try {
-      Progress.progressDialogue(context);
+      final payClient = Pay({
+        PayProvider.google_pay:
+            PaymentConfiguration.fromJsonString(googlePayConfigJson),
+      });
 
-      // Extract payment token from Google Pay result
-      final paymentToken = result['paymentMethodData']?['tokenizationData']
-              ?['token'] ??
-          result['token'];
+      final result = await payClient.showPaymentSelector(
+        PayProvider.google_pay,
+        [
+          PaymentItem(
+            label: 'Ordine EBORO',
+            amount: (amountInCents / 100).toStringAsFixed(2),
+            status: PaymentItemStatus.final_price,
+          ),
+        ],
+      );
 
-      if (paymentToken != null) {
-        // Send token to backend for Stripe processing
-        final response = await HttpInterceptor.post(
-          '$globalUrl/api/process-google-pay',
-          headers: {
-            'Authorization': 'Bearer ${MyApp2.token}',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'payment_token': paymentToken,
-            'amount': (total * 100).round(), // Stripe expects cents
-            'currency': 'EUR',
-          }),
-        );
+      // Extract token from Google Pay result
+      final tokenData = result['paymentMethodData']?['tokenizationData']?['token'];
+      if (tokenData != null) {
+        final tokenJson = json.decode(tokenData);
+        final stripeToken = tokenJson['id'];
 
-        final responseData = jsonDecode(response.body);
+        if (stripeToken != null) {
+          // Send token to server to charge
+          final response = await http.post(
+            Uri.parse('$globalUrl/api/stripe/charge-gpay'),
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: json.encode({'token': stripeToken, 'amount': amountInCents}),
+          );
 
-        if (response.statusCode == 200 && responseData['success'] == true) {
-          _googlePayTransactionId = responseData['transaction_id'];
-          await OrderPlaceButton(cart, context);
-        } else {
-          Progress.dimesDialog(context);
-          Auth2.show(
-              responseData['error'] ?? 'Errore nel pagamento Google Pay');
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            if (data['success'] == true) {
+              return data['payment_intent'];
+            }
+          }
         }
-      } else {
-        // Fallback: place order without token (for testing)
-        await OrderPlaceButton(cart, context);
       }
     } catch (e) {
-      Progress.dimesDialog(context);
-      Auth2.show('Errore Google Pay: $e');
+      debugPrint("🔴 Google Pay error: $e");
+      if (mounted) {
+        Auth2.show("Google Pay error: $e");
+      }
+      return null;
     }
+
+    return null;
   }
 
   // Helper method للعرض في الـ Confirmation Dialog
@@ -1635,268 +1598,6 @@ class MyCart2 extends State<MyCart> {
           Text(
             value,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCardPaymentSheet(
-      BuildContext sheetContext, CartTextProvider cart) {
-    // نحفظ context الصفحة الرئيسية (this.context) لاستخدامه في Navigation
-    final pageContext = this.context;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Complete Payment Methods',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          Column(
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width,
-                child: TextField(
-                  controller: _cardController,
-                  style: TextStyle(
-                      fontSize: MyApp2.fontSize14, color: Colors.grey),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    CreditCardNumberInputFormatter(),
-                  ],
-                  decoration: InputDecoration(
-                    labelText:
-                        AppLocalizations.of(context)!.translate("cardnumber"),
-                    labelStyle: TextStyle(
-                      fontSize: MyApp2.fontSize14,
-                      color: const Color(0xFFCBCBCB),
-                    ),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: MyApp2.W! * .06),
-                    border: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                          color: Color(0xFFCBCBCB), width: 0.5),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextField(
-                      controller: _dateController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        CreditCardExpirationDateFormatter(),
-                      ],
-                      style: TextStyle(
-                          fontSize: MyApp2.fontSize14, color: Colors.grey),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!
-                            .translate("expirationdate"),
-                        labelStyle: TextStyle(
-                          fontSize: MyApp2.fontSize14,
-                          color: const Color(0xFFCBCBCB),
-                        ),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: MyApp2.W! * 0.06),
-                        border: OutlineInputBorder(
-                          borderSide: const BorderSide(
-                              color: Color(0xFFCBCBCB), width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _cvvController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        CreditCardCvcInputFormatter(),
-                      ],
-                      style: TextStyle(
-                          fontSize: MyApp2.fontSize14, color: Colors.grey),
-                      decoration: InputDecoration(
-                        labelText: 'CVV',
-                        labelStyle: TextStyle(
-                          fontSize: MyApp2.fontSize14,
-                          color: const Color(0xFFCBCBCB),
-                        ),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: MyApp2.W! * 0.06),
-                        border: OutlineInputBorder(
-                          borderSide: const BorderSide(
-                              color: Color(0xFFCBCBCB), width: 0.5),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          MaterialButton(
-            onPressed: () async {
-              // ===== التحقق من البيانات =====
-              if (_cardController.text.isEmpty ||
-                  _dateController.text.isEmpty ||
-                  _cvvController.text.isEmpty) {
-                Auth2.show("Completa tutte le informazioni della carta");
-                return;
-              }
-
-              // احسب الـ total هنا
-              final provider =
-                  Provider.of<ProviderController>(pageContext, listen: false);
-              final subtotal = _calculateSubtotal(cart);
-              final deliveryData = provider.providers
-                  ?.where((e) =>
-                      e.id == cart.cart?.cart_items?.firstOrNull?.provider_id)
-                  .firstOrNull
-                  ?.Delivery;
-              final double tax =
-                  double.tryParse(deliveryData?.Tax ?? "0") ?? 0.0;
-              final double shipping =
-                  double.tryParse(deliveryData?.shipping ?? "0") ?? 0.0;
-              final double gratuity =
-                  double.tryParse(selected_gratuity ?? "0.0") ?? 0.0;
-              final double totalBeforePromo =
-                  subtotal + tax + shipping + gratuity;
-              final double finalTotal =
-                  (totalBeforePromo - _promoDiscount).clamp(0, double.infinity);
-
-              // ===== Confirmation Dialog قبل الدفع بالكارت =====
-              final confirmed = await showDialog<bool>(
-                context: pageContext,
-                barrierDismissible: false,
-                builder: (BuildContext dialogContext) {
-                  final cardLast4 = _cardController.text.replaceAll(' ', '');
-                  final displayCard = cardLast4.length >= 4
-                      ? '**** ${cardLast4.substring(cardLast4.length - 4)}'
-                      : '****';
-
-                  return AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    title: Row(
-                      children: [
-                        Icon(Icons.credit_card, color: myColor, size: 28),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Conferma pagamento',
-                          style: TextStyle(fontSize: 20),
-                        ),
-                      ],
-                    ),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Stai per addebitare sulla tua carta:',
-                          style: TextStyle(fontSize: 15),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildConfirmRow('Carta:', displayCard),
-                              _buildConfirmRow('Totale:',
-                                  '${finalTotal.toStringAsFixed(2)} €'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.warning_amber_rounded,
-                                  color: Colors.green.shade700, size: 20),
-                              const SizedBox(width: 8),
-                              const Expanded(
-                                child: Text(
-                                  'Sarà addebitato sulla carta immediatamente',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(false),
-                        child: Text(
-                          'Annulla',
-                          style: TextStyle(color: Colors.grey.shade700),
-                        ),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: myColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
-                        child: const Text(
-                          'Conferma pagamento',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              );
-
-              // لو المستخدم ضغط Annulla، نوقف
-              if (confirmed != true) return;
-
-              // لو confirmed، نقفل الـ bottom sheet أولاً ثم نكمل الدفع
-              Navigator.pop(sheetContext); // إغلاق bottom sheet
-              Progress.progressDialogue(pageContext);
-              await OrderPlaceButton(cart, pageContext);
-            },
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(50),
-            ),
-            minWidth: MediaQuery.of(context).size.width * 0.9,
-            color: myColor,
-            textColor: Colors.white,
-            child: SizedBox(
-              width: double.infinity,
-              child: Center(
-                child: Text(
-                  AppLocalizations.of(context)!.translate("placeorder"),
-                  style: TextStyle(
-                    fontSize: MyApp2.fontSize18,
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       ),

@@ -149,7 +149,6 @@ class ProductDetails2 extends State<ProductDetails> {
                     } catch (e) {
                       Auth2.show('Errore apertura WhatsApp');
                       // ignore: avoid_print
-                      // print('WhatsApp error: $e');
                     }
                   },
                 ),
@@ -168,7 +167,6 @@ class ProductDetails2 extends State<ProductDetails> {
                     } catch (e) {
                       Auth2.show('Errore apertura Email');
                       // ignore: avoid_print
-                      // print('Email error: $e');
                     }
                   },
                 ),
@@ -186,7 +184,6 @@ class ProductDetails2 extends State<ProductDetails> {
                     } catch (e) {
                       Auth2.show('Errore apertura SMS');
                       // ignore: avoid_print
-                      // print('SMS error: $e');
                     }
                   },
                 ),
@@ -1181,7 +1178,6 @@ class ProductDetails2 extends State<ProductDetails> {
         }
       } catch (e) {
         // ignore: avoid_print
-        // print('❌ Errore nel parsing additions: $e');
       }
     }
 
@@ -1287,7 +1283,7 @@ class ProductDetails2 extends State<ProductDetails> {
                       Navigator.pop(context, true);
                     }
                   } catch (e) {
-                    debugPrint('❌ Errore addToCart: $e');
+                    // addToCart error
                   } finally {
                     if (mounted) {
                       setState(() {

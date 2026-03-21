@@ -43,11 +43,7 @@ void main() async {
     if (firebaseReady) {
       try {
         await NotificationService.initialize();
-      } catch (e) {
-        if (kDebugMode) {
-          print('NotificationService initialization failed: $e');
-        }
-      }
+      } catch (_) {}
     }
   }
 
@@ -65,12 +61,10 @@ Future<bool> _safeInitFirebase() async {
     return Firebase.apps.isNotEmpty;
   } on PlatformException catch (e) {
     if (kDebugMode) {
-      // print('Firebase initialization failed: $e');
     }
     return false;
   } catch (e) {
     if (kDebugMode) {
-      // print('Firebase initialization error: $e');
     }
     return false;
   }
@@ -302,7 +296,6 @@ class MyApp2 extends State<MyHomePage> {
       ).timeout(
         const Duration(seconds: 3),
         onTimeout: () {
-          // print("checkState timeout - proceeding anyway");
           if (mounted) checkAuth();
           throw Exception('Timeout');
         },
@@ -340,11 +333,9 @@ class MyApp2 extends State<MyHomePage> {
           }
         }
       } else {
-        // print("checkState() no data");
         if (mounted) await checkAuth();
       }
     } catch (e) {
-      // print("checkState error: $e");
       if (mounted) await checkAuth();
     }
     return message;
@@ -389,6 +380,7 @@ class MyApp2 extends State<MyHomePage> {
   Future<void> go() async {
     try {
       await Auth2.setLocationFromGPS();
+      await UserData.loadDeliveryAddress();
 
       final order = Provider.of<UserOrderProvider>(context, listen: false);
       final providerController =
@@ -425,15 +417,8 @@ class MyApp2 extends State<MyHomePage> {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
           builder: (context) =>
-              const MainScreen(initialIndex: 0)),
+              const MainScreen(initialIndex: 2)),
       (Route<dynamic> route) => false,
-    );
-  }
-
-  void _navigateToReplacement(Widget page) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => page),
     );
   }
 

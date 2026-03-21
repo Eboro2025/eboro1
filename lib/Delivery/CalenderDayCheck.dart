@@ -28,7 +28,6 @@ class CalenderDayCheck2 extends State <CalenderDayCheck> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
     timer();
   }

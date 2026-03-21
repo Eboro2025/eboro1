@@ -66,7 +66,6 @@ class ProviderData {
   static Future<ShippingData?> fetchDeliveryData(
       Map<String, dynamic> jsonMap) async {
     try {
-      UserData userInfo = UserData.fromJson(jsonMap['user']);
       int id = jsonMap['id'];
       String? latStr = Auth2.user?.activeLat;
       String? longStr = Auth2.user?.activeLong;

@@ -16,7 +16,6 @@ class DeliveryAPI extends StatefulWidget {
 class DeliveryAPI2 extends State <DeliveryAPI> {
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -38,16 +37,13 @@ class DeliveryAPI2 extends State <DeliveryAPI> {
       if(response.statusCode == 200){
         Iterable A = json.decode(response.body)['data'];
         delivery = List<OrderData>.from(A.map((A)=> OrderData.fromJson(A)));
-        // print('delivery Orders Length :' + delivery.length.toString());
 
       }
       else
       {
-        // print("no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return delivery;
   }
@@ -75,11 +71,9 @@ class DeliveryAPI2 extends State <DeliveryAPI> {
       }
       else
       {
-        // print("no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return delivery;
   }
@@ -113,11 +107,9 @@ class DeliveryAPI2 extends State <DeliveryAPI> {
       }
       else
       {
-        // print("getOrders() no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return order;
   }
@@ -151,15 +143,12 @@ class DeliveryAPI2 extends State <DeliveryAPI> {
         final fixedJson = fixBrokenJson(response.body);
         Iterable A = json.decode(fixedJson)['data'];
         product = List<ProductData>.from(A.map((A)=> ProductData.fromJson(A)));
-        // print('All products Length : ' + product.length.toString());
       }
       else
       {
-        // print("getProducts() no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return product;
   }

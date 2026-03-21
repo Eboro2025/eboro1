@@ -2,16 +2,13 @@ import 'dart:async';
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/API/CashierAPI.dart';
 import 'package:eboro/Auth/Profile.dart';
+import 'package:eboro/Client/MyFavorit.dart';
 import 'package:eboro/Client/MyOrders.dart';
 import 'package:eboro/Client/MyVideo.dart';
 import 'package:eboro/RealTime/Provider/UserOrderProvider.dart';
 import 'package:eboro/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/Providers/AllProviders.dart';
-import 'package:badges/badges.dart' as badges;
-import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:eboro/main.dart';
@@ -33,7 +30,7 @@ class _NavItemData {
 class MainScreen extends StatefulWidget {
   final int initialIndex;
 
-  const MainScreen({Key? key, this.initialIndex = 0}) : super(key: key);
+  const MainScreen({Key? key, this.initialIndex = 2}) : super(key: key);
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -256,16 +253,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (!_builtPages.containsKey(index)) {
       switch (index) {
         case 0:
-          _builtPages[0] = const AllProviders(catID: null, name: null);
+          _builtPages[0] = const MyOrders();
           break;
         case 1:
-          _builtPages[1] = const MyOrders();
+          _builtPages[1] = MyVideo(isVisible: _videoVisible);
           break;
         case 2:
-          _builtPages[2] = MyVideo(isVisible: _videoVisible);
+          _builtPages[2] = const AllProviders(catID: null, name: null);
           break;
         case 3:
-          _builtPages[3] = MyProfile();
+          _builtPages[3] = MyFavorite();
+          break;
+        case 4:
+          _builtPages[4] = MyProfile();
           break;
       }
     }
@@ -276,9 +276,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        if (_currentIndex != 0) {
+        if (_currentIndex != 2) {
           setState(() {
-            _currentIndex = 0;
+            _currentIndex = 2;
             _videoVisible.value = false;
           });
           return false;
@@ -293,7 +293,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             Expanded(
               child: IndexedStack(
                 index: _currentIndex,
-                children: List.generate(4, (i) {
+                children: List.generate(5, (i) {
                   // Only build pages that have been visited
                   if (_visitedTabs.contains(i)) {
                     return _getPage(i);
@@ -317,11 +317,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 0;
 
             final navItems = [
-              _NavItemData(0, Icons.home_outlined, Icons.home_rounded, "Home", 0),
-              _NavItemData(1, Icons.shopping_bag_outlined, Icons.shopping_bag,
+              _NavItemData(0, Icons.shopping_bag_outlined, Icons.shopping_bag,
                   AppLocalizations.of(context)?.translate("myorders") ?? "I miei ordini", activeCount),
-              _NavItemData(2, Icons.videocam_outlined, Icons.videocam, "Video", 0),
-              _NavItemData(3, Icons.person_outline, Icons.person,
+              _NavItemData(1, Icons.videocam_outlined, Icons.videocam, "Video", 0),
+              _NavItemData(2, Icons.home_outlined, Icons.home_rounded, "Home", 0),
+              _NavItemData(3, Icons.favorite_border, Icons.favorite,
+                  AppLocalizations.of(context)?.translate("myfavorite") ?? "Preferiti", 0),
+              _NavItemData(4, Icons.person_outline, Icons.person,
                   AppLocalizations.of(context)?.translate("myprofile") ?? "Il mio profilo", 0),
             ];
 
@@ -395,7 +397,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                               onTap: () => setState(() {
                                 _visitedTabs.add(item.index);
                                 _currentIndex = item.index;
-                                _videoVisible.value = (item.index == 2);
+                                _videoVisible.value = (item.index == 1);
                               }),
                               child: Stack(
                                 clipBehavior: Clip.none,
@@ -465,7 +467,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       onTap: () => setState(() {
         _visitedTabs.add(index);
         _currentIndex = index;
-        _videoVisible.value = (index == 2);
+        _videoVisible.value = (index == 1);
       }),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(

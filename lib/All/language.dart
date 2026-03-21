@@ -40,7 +40,7 @@ class Language2 extends State<Language> {
         backgroundColor: myColor,
         centerTitle: true,
         title: Text(
-          AppLocalizations.of(context)!.translate("language") ?? "Language",
+          AppLocalizations.of(context)!.translate("language"),
           style: TextStyle(color: Colors.white, fontSize: MyApp2.fontSize20),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -54,7 +54,7 @@ class Language2 extends State<Language> {
           final nativeName = lang['native']!;
           final flag = lang['flag']!;
           final translatedName =
-              AppLocalizations.of(context)!.translate(lang['key']!) ?? nativeName;
+              AppLocalizations.of(context)!.translate(lang['key']!);
           final isSelected = selectedLang == code;
 
           return Padding(

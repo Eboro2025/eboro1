@@ -30,7 +30,6 @@ class AboutData {
         assistPhonesList = [];
       }
     } catch (e) {
-      // print('⚠️ Error parsing assist_phones: $e');
       assistPhonesList = [];
     }
     

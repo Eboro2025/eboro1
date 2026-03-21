@@ -8,14 +8,15 @@ String fixImageUrl(String? url) {
 
   var fixed = url.trim();
 
-  // لو الـ URL جاي من الـ backend بـ localhost -> نحوله للسيرفر الحالي
-  if (fixed.contains('http://localhost/') && !fixed.contains(':')) {
-    fixed = fixed.replaceAll('http://localhost/', '$globalUrl/');
-  } else if (fixed.contains('http://localhost:8000')) {
-    fixed = fixed.replaceAll('http://localhost:8000', globalUrl);
-  } else if (fixed.contains('http://127.0.0.1')) {
-    fixed = fixed.replaceAll('http://127.0.0.1:8000', globalUrl);
-    fixed = fixed.replaceAll('http://127.0.0.1/', '$globalUrl/');
+  // لو الرابط من localhost أو 127.0.0.1 -> نحوله للسيرفر الحالي
+  final localPatterns = [
+    RegExp(r'https?://localhost(:\d+)?'),
+    RegExp(r'https?://127\.0\.0\.1(:\d+)?'),
+  ];
+  for (final pattern in localPatterns) {
+    if (pattern.hasMatch(fixed)) {
+      fixed = fixed.replaceAll(pattern, globalUrl);
+    }
   }
 
   // لو الرابط مش كامل (مجرد path)، نضيف base URL

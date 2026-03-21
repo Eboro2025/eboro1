@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:eboro/Helper/HttpInterceptor.dart';
 import 'package:eboro/main.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 
@@ -11,14 +12,15 @@ class Favorite extends StatefulWidget {
   @override
   Favorite2 createState() => Favorite2();
 }
-//a
-class Favorite2 extends State <Favorite> {
+
+class Favorite2 extends State<Favorite> {
 
   static List<FavoriteData>? favorite;
 
+  static const String _cacheKey = 'favorites_cache';
+
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -27,38 +29,58 @@ class Favorite2 extends State <Favorite> {
     return Scaffold();
   }
 
+  /// Load favorites from local cache
+  static Future<List<FavoriteData>?> loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString(_cacheKey);
+      if (cached == null || cached.isEmpty) return null;
+      final List<dynamic> jsonList = json.decode(cached);
+      favorite = jsonList
+          .map((j) => FavoriteData.fromJson(j as Map<String, dynamic>))
+          .toList();
+      return favorite;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Save favorites to local cache
+  static Future<void> saveToCache(List<FavoriteData>? favorites) async {
+    if (favorites == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = favorites
+          .where((f) => f.provider?.rawJson != null)
+          .map((f) => f.toJson())
+          .toList();
+      await prefs.setString(_cacheKey, json.encode(jsonList));
+    } catch (_) {}
+  }
 
   static Future<List<FavoriteData>?> getFavorite() async {
-    try{
+    try {
       String myUrl = "$globalUrl/api/user-favorite";
-      final response = await http.get(Uri.parse(myUrl),headers: {
-        'apiLang' : MyApp2.apiLang.toString(),
+      final response = await http.get(Uri.parse(myUrl), headers: {
+        'apiLang': MyApp2.apiLang.toString(),
         'Accept': 'application/json',
         'Authorization': "${MyApp2.token}",
       });
 
-      if(response.statusCode == 200)
-      {
-        Iterable A = json.decode(response.body)['data'];
-        favorite = List<FavoriteData>.from(A.map((A)=> FavoriteData.fromJson(A)));
+      if (response.statusCode == 200) {
+        Iterable data = json.decode(response.body)['data'];
+        favorite = List<FavoriteData>.from(
+            data.map((item) => FavoriteData.fromJson(item)));
+        // Save to local cache
+        saveToCache(favorite);
       }
-      else
-      {
-        // print("Favorite() no data");
-      }
-
-    }catch (e) {
-      // print(e);
-    }
+    } catch (_) {}
     return favorite;
   }
 
   static Future<bool> removeFromFavorite(i, context) async {
     try {
       String myUrl = "$globalUrl/api/add-to-favorite";
-      // print('🔄 Toggle favorite for provider: $i');
-      // print('🔗 URL: $myUrl');
-      // print('🔑 Token: ${MyApp2.token?.substring(0, 20)}...');
 
       final response = await HttpInterceptor.post(myUrl, headers: {
         'apiLang': MyApp2.apiLang.toString(),
@@ -68,25 +90,17 @@ class Favorite2 extends State <Favorite> {
         'provider_id': i.toString(),
       });
 
-      // print('📡 Response status: ${response.statusCode}');
-      // print('📦 Response body: ${response.body}');
-
       if (response.statusCode == 200) {
-        var jsonData = json.decode(response.body);
-        // print('✅ Favorite toggled successfully: $jsonData');
         return true;
       } else {
-        // print("❌ Favorite failed: ${response.statusCode}");
         return false;
       }
     } catch (e) {
-      // print('❌ Favorite error: $e');
       return false;
     }
   }
 
-
-  static show (String message, context) async {
+  static show(String message, context) async {
     Auth2.show(message);
   }
 }

@@ -49,7 +49,6 @@ class BannerApi {
         return _cachedBanners ?? [];
       }
     } catch (e) {
-      // print('Error loading banners: $e');
       // Return cached data on error if available
       return _cachedBanners ?? [];
     }
@@ -78,7 +77,6 @@ class BannerApi {
       }
       return false;
     } catch (e) {
-      // print('Error updating banner providers: $e');
       return false;
     }
   }

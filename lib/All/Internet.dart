@@ -13,7 +13,6 @@ class Internet2 extends State <Internet> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 

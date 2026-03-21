@@ -48,7 +48,6 @@ class DailySpecialApi {
         return _cachedSpecials ?? [];
       }
     } catch (e) {
-      // print('Error loading daily specials: $e');
       return _cachedSpecials ?? [];
     }
   }

@@ -43,7 +43,6 @@ class SetLocation2 extends State<SetLocation> {
   }
 
   static authenticate() async {
-    // print(userPosition.latitude??"");
 
     String myUrl = "$globalUrl/api/distance2/"
         "${userPosition.latitude}/${userPosition.longitude}";

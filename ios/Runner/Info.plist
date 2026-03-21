@@ -37,12 +37,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti vicini, calcolare i costi di consegna e tracciare il tuo ordine in tempo reale.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Abbiamo bisogno della tua posizione per inviarti notifiche sullo stato della consegna quando l'app è in background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti e i negozi vicini a te.</string>
+	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti e i negozi vicini a te e calcolare i costi di consegna.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Abbiamo bisogno della tua posizione per mostrarti i ristoranti e i negozi vicini a te e calcolare i costi di consegna.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -73,8 +71,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -87,10 +83,10 @@
 	<string>Abbiamo bisogno della fotocamera per scattare foto del profilo e dei prodotti.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Abbiamo bisogno di accedere alla galleria per caricare foto del profilo e dei prodotti.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Abbiamo bisogno di salvare le immagini nella galleria.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Abbiamo bisogno del microfono per registrare video.</string>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Necessario per migliorare la precisione della posizione durante la consegna.</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.food-and-drink</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

@@ -12,7 +12,6 @@ class Contacts2 extends State <Contacts> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 

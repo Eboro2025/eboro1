@@ -396,9 +396,7 @@ class Home2 extends State<Home> {
                                             AppLocalizations.of(context)!
                                                     .translate(order
                                                             .order![i].status ??
-                                                        "pending") ??
-                                                order.order![i].status ??
-                                                "pending",
+                                                        "pending"),
                                             style: TextStyle(
                                               color: _statusColor(
                                                   order.order![i].status ??

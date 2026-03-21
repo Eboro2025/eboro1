@@ -19,7 +19,6 @@ class Clickwidget extends State <ClickOrder> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     timer = Timer.periodic(Duration(minutes: 5), (Timer t) => checkInternetState());
 

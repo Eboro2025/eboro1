@@ -237,7 +237,7 @@ class SpecificLocalizationDelegate
   SpecificLocalizationDelegate(this.overriddenLocale);
 
   @override
-  bool isSupported(Locale locale) => overriddenLocale != null;
+  bool isSupported(Locale locale) => true;
 
   @override
   Future<AppLocalizations> load(Locale locale) =>

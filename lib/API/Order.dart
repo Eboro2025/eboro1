@@ -48,7 +48,6 @@ class Order2 extends State<Order> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -60,7 +59,7 @@ class Order2 extends State<Order> {
   Future<bool> vOrder(String order_id, String date) async {
     try {
       String myUrl = "$globalUrl/api/edit-order";
-      final response = await http.post(Uri.parse(myUrl), headers: {
+      await http.post(Uri.parse(myUrl), headers: {
         'apiLang': MyApp2.apiLang.toString(),
         'Accept': 'application/json',
         'Authorization': "${MyApp2.token}",
@@ -112,7 +111,7 @@ class Order2 extends State<Order> {
         "drop_address": "${Auth2.user?.activeAddress ?? ''}",
         "payment": type ?? "0",
         "flag": "json",
-        "ordar_at": date ?? ""
+        "ordar_at": date
       };
 
       // إضافة البيانات الاختيارية فقط إذا كانت موجودة
@@ -136,9 +135,7 @@ class Order2 extends State<Order> {
         requestBody["transaction_id"] = transactionId;
       }
 
-      debugPrint('🔵 [makeOrder] URL: $myUrl');
-      debugPrint('🔵 [makeOrder] Payment type: $type');
-      debugPrint('🔵 [makeOrder] Full request body: $requestBody');
+      // Sending order request
 
       final response = await http.post(Uri.parse(myUrl),
           headers: {
@@ -148,17 +145,15 @@ class Order2 extends State<Order> {
           },
           body: requestBody);
 
-      debugPrint('🔵 [makeOrder] Response status: ${response.statusCode}');
-      debugPrint('🔵 [makeOrder] Response body: ${response.body}');
+      // Response received
 
       if (response.statusCode == 200) {
         Map? A = json.decode(response.body);
 
-        debugPrint('🔵 [makeOrder] Parsed response: $A');
-        debugPrint('🔵 [makeOrder] Payment type: $type');
+        // Parsed response
 
         if (type == "2" && A.toString().contains("paypal")) {
-          debugPrint('🔵 [makeOrder] PayPal link: ${A?['link']}');
+          // PayPal link received
           // إغلاق Progress dialog أولاً قبل فتح PayPal WebView
           try {
             Navigator.pop(context);
@@ -169,8 +164,7 @@ class Order2 extends State<Order> {
           return true;
         } else if (type == "2") {
           // PayPal لكن ما فيه رابط paypal - يعني فيه خطأ
-          debugPrint(
-              '🔴 [makeOrder] PayPal error - no paypal link in response: $A');
+          // PayPal error - no link in response
           String errorMsg = A?['link']?['original']?['message'] ??
               A?['message'] ??
               A?['data']?['message'] ??
@@ -248,8 +242,7 @@ class Order2 extends State<Order> {
         String errorMsg = "Server error (${response.statusCode})";
         try {
           final errorData = json.decode(response.body);
-          debugPrint(
-              '🔴 [makeOrder] Error response (${response.statusCode}): $errorData');
+          // Error response
           if (errorData is Map) {
             // Laravel 422 validation errors
             if (errorData['errors'] != null && errorData['errors'] is Map) {
@@ -259,13 +252,13 @@ class Order2 extends State<Order> {
               errorMsg = allErrors.isNotEmpty
                   ? allErrors
                   : (errorData['message'] ?? errorMsg);
-              debugPrint('🔴 [makeOrder] Validation errors: $errors');
+              // Validation errors
             } else {
               errorMsg = errorData['message'] ?? errorData['error'] ?? errorMsg;
             }
           }
         } catch (e) {
-          debugPrint('🔴 [makeOrder] Error parsing response: $e');
+          // Error parsing response
         }
 
         Auth2.show(errorMsg);
@@ -397,7 +390,7 @@ class Order2 extends State<Order> {
           } catch (_) {
             // محاولة أخيرة: استخراج orders يدوياً
             order = _extractOrdersManually(jsonBody);
-            if (order == null || order!.isEmpty) {
+            if (order == null || order.isEmpty) {
               order = [];
             }
           }

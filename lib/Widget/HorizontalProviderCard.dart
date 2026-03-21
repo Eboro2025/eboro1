@@ -1,11 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart' show IterableExtension;
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/Helper/ImageHelper.dart';
 import 'package:eboro/Helper/OfferData.dart';
 import 'package:eboro/Helper/ProviderData.dart';
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
+import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HorizontalProviderCard extends StatelessWidget {
   final ProviderData eProvider;
@@ -44,6 +47,11 @@ class HorizontalProviderCard extends StatelessWidget {
     final bool isClosed = eProvider.state == '0';
     final OfferData? displayOffer = eProvider.offer;
     final bool hasOffer = displayOffer != null;
+
+    final favorites = providerController.Favorites ?? [];
+    final bool isFav = favorites
+            .firstWhereOrNull((item) => eProvider.id == item.provider?.id) !=
+        null;
 
     String rawDuration = eProvider.Delivery?.Duration?.toString() ?? '--';
     rawDuration = rawDuration.replaceAll(RegExp(r'\s*mins?\b', caseSensitive: false), '').trim();
@@ -88,7 +96,7 @@ class HorizontalProviderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image with offer badge
+            // Image with offer badge + favorite
             Stack(
               children: [
                 ClipRRect(
@@ -146,6 +154,38 @@ class HorizontalProviderCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Favorite button
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                      await providerController.toggleFavorite(eProvider, context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isFav
+                            ? FontAwesomeIcons.heartCircleMinus
+                            : FontAwesomeIcons.heartCircleCheck,
+                        color: isFav ? Colors.red : myColor,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
                 // Closed overlay
                 if (isClosed)
                   Positioned.fill(

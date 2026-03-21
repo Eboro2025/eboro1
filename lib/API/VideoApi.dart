@@ -72,7 +72,6 @@ class VideoApi {
         return data.map((v) => PromoVideo.fromJson(v)).toList();
       }
     } catch (e) {
-      // print('DEBUG VIDEO API ERROR: $e');
     }
     return [];
   }

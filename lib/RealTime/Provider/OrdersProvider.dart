@@ -66,7 +66,6 @@ class OrdersProvider with ChangeNotifier
 
   // timer(context) async
   // {
-  //   print("timer open for order : ");
   //   await updateOrder();
   //   orderTimer = Timer.periodic(Duration(minutes: 1), (Timer t) =>  timer(context));
   // }

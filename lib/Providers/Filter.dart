@@ -40,7 +40,6 @@ class Filter2 extends State <Filter> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 

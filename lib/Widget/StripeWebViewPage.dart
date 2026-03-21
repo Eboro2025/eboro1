@@ -76,6 +76,24 @@ class _StripeWebViewPageState extends State<StripeWebViewPage> {
   Future<void> _fetchPaymentIntent(String url) async {
     try {
       final uri = Uri.parse(url);
+
+      // GPay flow returns ?pi=xxx, Checkout flow returns ?session_id=xxx
+      final pi = uri.queryParameters['pi'];
+      if (pi != null && pi.isNotEmpty) {
+        // GPay: fetch from gpay success endpoint
+        final fetchUrl = '$globalUrl/stripe/mobile-payment-success-gpay?pi=$pi';
+        final response = await http.get(Uri.parse(fetchUrl));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final paymentIntent = data['payment_intent'];
+          if (mounted) Navigator.pop(context, paymentIntent);
+        } else {
+          if (mounted) Navigator.pop(context, null);
+        }
+        return;
+      }
+
+      // Checkout flow
       final sessionId = uri.queryParameters['session_id'];
       final fetchUrl = '$globalUrl/stripe/mobile-payment-success?session_id=$sessionId';
       final response = await http.get(Uri.parse(fetchUrl));
@@ -88,7 +106,6 @@ class _StripeWebViewPageState extends State<StripeWebViewPage> {
         if (mounted) Navigator.pop(context, null);
       }
     } catch (e) {
-      debugPrint('Stripe WebView fetch error: $e');
       if (mounted) Navigator.pop(context, null);
     }
   }
@@ -96,40 +113,88 @@ class _StripeWebViewPageState extends State<StripeWebViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6F9),
       appBar: AppBar(
-        title: const Text('Pagamento'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 18, color: Colors.green.shade600),
+            const SizedBox(width: 8),
+            const Text(
+              'Pagamento Sicuro',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close, color: Colors.black54),
           onPressed: () => Navigator.pop(context, null),
         ),
+        bottom: _isLoading && !_hasError
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(3),
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade500),
+                ),
+              )
+            : null,
       ),
-      body: Stack(
-        children: [
-          if (_hasError)
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.wifi_off, size: 48, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  const Text('Errore di connessione', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() { _isLoading = true; _hasError = false; });
-                      _controller.reload();
-                    },
-                    child: const Text('Riprova'),
-                  ),
-                ],
+      body: _hasError
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.wifi_off_rounded, size: 48, color: Colors.red.shade300),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Errore di connessione',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Controlla la tua connessione e riprova',
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() { _isLoading = true; _hasError = false; });
+                        _controller.reload();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Riprova'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
-          else
-            WebViewWidget(controller: _controller),
-          if (_isLoading && !_hasError)
-            const Center(child: CircularProgressIndicator()),
-        ],
-      ),
+          : WebViewWidget(controller: _controller),
     );
   }
 }

@@ -1,8 +1,6 @@
-import 'package:collection/collection.dart' show IterableExtension;
-import 'package:eboro/API/Favorite.dart';
 import 'package:eboro/Helper/FavoriteData.dart';
+import 'package:eboro/Helper/ImageHelper.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
-import 'package:eboro/Widget/Progress.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../API/Auth.dart';
-import '../API/Rates.dart';
 import '../RealTime/Provider/CartTextProvider.dart';
 
 class Favorites extends StatefulWidget {
@@ -25,32 +22,22 @@ class Favorites2 extends State<Favorites> {
   }
 
   /// helper صغير يطلع أول رقم من الـ Duration
-  /// مثال:
-  /// "15 to 35 mins"  ->  15
-  /// 20               ->  20
   double _parseDurationMinutes(dynamic raw) {
     if (raw == null) return 0.0;
-
     if (raw is num) return raw.toDouble();
-
     final String text = raw.toString();
-
-    // أول رقم في الـ string
     final match = RegExp(r'(\d+(\.\d+)?)').firstMatch(text);
     if (match == null) return 0.0;
-
     return double.tryParse(match.group(1)!) ?? 0.0;
   }
 
   /// Helper method to build offer badge text
-  /// Shows: -X% for discount, fs for free delivery, 2×1 for two-for-one, etc.
   String _buildOfferTextFromOffer(dynamic offer) {
     if (offer == null) return 'Offerta';
 
     final offerType = offer.offer_type;
     final List<String> parts = [];
 
-    // Check if it's a discount offer
     if (offerType == 'discount' || offerType == 'fixed_discount') {
       final value = offer.offer_value?.toString().trim();
       if (value != null && value.isNotEmpty) {
@@ -60,7 +47,6 @@ class Favorites2 extends State<Favorites> {
       }
     }
 
-    // Check if it's a 2×1 or 1+1 offer
     if (offerType == 'two_for_one' ||
         offerType == 'one_plus_one' ||
         offerType == 'two_for_one_free_delivery') {
@@ -71,28 +57,25 @@ class Favorites2 extends State<Favorites> {
       }
     }
 
-    // Check if free delivery is included
     if (offerType == 'free_delivery' || offerType == 'two_for_one_free_delivery') {
       parts.add('fs');
     }
 
-    if (parts.isEmpty) {
-      return 'Offerta';
-    }
-
+    if (parts.isEmpty) return 'Offerta';
     return parts.join(' ');
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ProviderController>(context);
+    final providerController = Provider.of<ProviderController>(context);
     final cart = Provider.of<CartTextProvider>(context);
+    final favoritesList = providerController.Favorites ?? [];
 
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 5),
         children: [
-          for (FavoriteData favorite in Favorite2.favorite!)
+          for (FavoriteData favorite in favoritesList)
             Padding(
               padding:
                   const EdgeInsets.only(left: 7, right: 7, top: 5, bottom: 5),
@@ -110,7 +93,7 @@ class Favorites2 extends State<Favorites> {
                         alignment: Alignment.center,
                         children: [
                           CachedNetworkImage(
-                            imageUrl: "${favorite.provider?.logo}",
+                            imageUrl: fixImageUrl(favorite.provider?.logo?.toString() ?? ''),
                             useOldImageOnUrlChange: true,
                             progressIndicatorBuilder:
                                 (context, url, downloadProgress) =>
@@ -125,9 +108,7 @@ class Favorites2 extends State<Favorites> {
                                   fit: BoxFit.fill,
                                 ),
                               ),
-                              child: Row(
-                                children: [],
-                              ),
+                              child: const Row(children: []),
                             ),
                             imageBuilder: (context, imageProvider) => Container(
                               padding: const EdgeInsets.all(10),
@@ -143,7 +124,7 @@ class Favorites2 extends State<Favorites> {
                               decoration: BoxDecoration(
                                 image: DecorationImage(
                                   colorFilter: ColorFilter.mode(
-                                    Colors.black.withOpacity(.3),
+                                    Colors.black.withValues(alpha: 0.3),
                                     BlendMode.darken,
                                   ),
                                   image: imageProvider,
@@ -190,7 +171,7 @@ class Favorites2 extends State<Favorites> {
                                         boxShadow: [
                                           BoxShadow(
                                             color:
-                                                Colors.black.withOpacity(0.15),
+                                                Colors.black.withValues(alpha: 0.15),
                                             blurRadius: 4,
                                             offset: const Offset(0, 2),
                                           ),
@@ -209,28 +190,16 @@ class Favorites2 extends State<Favorites> {
                                     padding:
                                         const EdgeInsets.only(top: 5, right: 5),
                                     child: GestureDetector(
-                                      child: provider.Favorites!
-                                                  .firstWhereOrNull((item) =>
-                                                      favorite.provider?.id ==
-                                                      item.provider!.id) !=
-                                              null
-                                          ? Icon(
-                                              FontAwesomeIcons.heartCircleMinus,
-                                              color: myColor,
-                                              size: MyApp2.W! * .06,
-                                            )
-                                          : Icon(
-                                              FontAwesomeIcons.heartCircleCheck,
-                                              color: myColor,
-                                              size: MyApp2.W! * .06,
-                                            ),
+                                      child: Icon(
+                                        FontAwesomeIcons.heartCircleMinus,
+                                        color: Colors.red,
+                                        size: MyApp2.W! * .06,
+                                      ),
                                       onTap: () async {
-                                        Progress.progressDialogue(context);
-                                        await Favorite2.removeFromFavorite(
-                                            favorite.provider?.id, context);
-                                        await provider.updateProvider(
-                                            provider.categoryId);
-                                        Progress.dimesDialog(context);
+                                        if (favorite.provider != null) {
+                                          await providerController.toggleFavorite(
+                                              favorite.provider!, context);
+                                        }
                                       },
                                     ),
                                   ),
@@ -253,7 +222,7 @@ class Favorites2 extends State<Favorites> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     for (var items
-                                        in favorite.provider!.type!) ...[
+                                        in favorite.provider?.type ?? []) ...[
                                       Container(
                                         margin: const EdgeInsets.only(right: 5),
                                         padding: const EdgeInsets.all(5),
@@ -263,7 +232,7 @@ class Favorites2 extends State<Favorites> {
                                               BorderRadius.circular(5),
                                         ),
                                         child: Text(
-                                          items.type!.type.toString(),
+                                          items.type?.type?.toString() ?? '',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: MyApp2.fontSize14,
@@ -280,16 +249,16 @@ class Favorites2 extends State<Favorites> {
                       ),
                       onTap: () async {
                         if (favorite.provider?.state == '1') {
-                          if (Auth2.user!.email == "info@eboro.com" ||
-                              cart.cart!.cart_items!.isEmpty) {
-                            Progress.progressDialogue(context);
-                            await provider.updateProduct(
+                          final userEmail = Auth2.user?.email ?? "";
+                          final cartEmpty = cart.cart?.cart_items?.isEmpty ?? true;
+
+                          if (userEmail == "info@eboro.com" || cartEmpty) {
+                            await providerController.updateProduct(
                                 favorite.provider, context, true);
-                          } else if (Auth2.user!.email != "info@eboro.com") {
+                          } else {
                             cart.restCartItem(context);
-                            cart.cart!.cart_items!.clear();
-                            Progress.progressDialogue(context);
-                            await provider.updateProduct(
+                            cart.cart?.cart_items?.clear();
+                            await providerController.updateProduct(
                                 favorite.provider, context, true);
                           }
                         } else {
@@ -367,34 +336,14 @@ class Favorites2 extends State<Favorites> {
                               // التقييم
                               Row(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 5),
-                                    child: GestureDetector(
-                                      child: (Rates2.rate != null &&
-                                                  Rates2.rate!.isNotEmpty) &&
-                                              Rates2.rate!
-                                                  .where((item) => item
-                                                      .provider!.id
-                                                      .toString()
-                                                      .contains(
-                                                          "${favorite.provider?.id}"))
-                                                  .isNotEmpty
-                                          ? FaIcon(
-                                              FontAwesomeIcons.solidStar,
-                                              color: Colors.amberAccent,
-                                              size: MyApp2.fontSize16,
-                                            )
-                                          : FaIcon(
-                                              FontAwesomeIcons.star,
-                                              color: Colors.grey[400],
-                                              size: MyApp2.fontSize16,
-                                            ),
-                                      onTap: () {},
-                                    ),
+                                  FaIcon(
+                                    FontAwesomeIcons.star,
+                                    color: Colors.amberAccent,
+                                    size: MyApp2.fontSize16,
                                   ),
+                                  const SizedBox(width: 4),
                                   Text(
-                                    "${favorite.provider?.rateRatio}%",
+                                    "${favorite.provider?.rateRatio ?? 0}%",
                                     style: TextStyle(
                                       color: Colors.grey[400],
                                       fontSize: MyApp2.fontSize14,

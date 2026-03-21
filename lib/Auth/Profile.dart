@@ -5,7 +5,6 @@ import 'package:eboro/Client/MyCart.dart';
 import 'package:eboro/Client/MyFavorit.dart';
 import 'package:eboro/Client/MyOrders.dart';
 import 'package:eboro/Client/AssistenzaPage.dart';
-import 'package:eboro/Client/Contact Us/WriteContact.dart';
 import 'package:eboro/All/language.dart';
 import 'package:eboro/All/PrivacyPage.dart';
 import 'package:eboro/Auth/Signin.dart';
@@ -205,7 +204,6 @@ class Profile extends State<MyProfile> {
     try {
       await Auth2.getUserDetails(context);
     } catch (e) {
-      // print('Error loading user data: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -215,8 +213,6 @@ class Profile extends State<MyProfile> {
     }
 
     if (mounted) {
-      // print(Auth2.user?.lat ?? 'No lat');
-      // print(Auth2.user?.long ?? 'No long');
     }
   }
 
@@ -356,72 +352,6 @@ class Profile extends State<MyProfile> {
                   ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color iconColor,
-    int maxLines = 1,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 24,
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  value,
-                  maxLines: maxLines,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -612,17 +542,16 @@ class Profile extends State<MyProfile> {
               },
             ),
           ],
-          if (Auth2.user?.is_vip_business == true)
-            _buildMenuItem(
-              icon: Icons.handshake,
-              label: 'VIP Business',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const VipBusinessScreen()),
-                );
-              },
-            ),
+          _buildMenuItem(
+            icon: Icons.handshake,
+            label: 'VIP Business',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VipBusinessScreen()),
+              );
+            },
+          ),
           _buildMenuItem(
             icon: Icons.language,
             label: AppLocalizations.of(context)!.translate("language"),

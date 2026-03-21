@@ -23,7 +23,6 @@ class TypeData {
         created_at: json['created_at']?.toString(),
       );
     } catch (e) {
-      // print('❌ Error parsing TypeData: $e');
       return TypeData(); // Return empty TypeData on error
     }
   }

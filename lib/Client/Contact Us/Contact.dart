@@ -14,7 +14,6 @@ class Contact extends StatefulWidget {
 class Contact2 extends State<Contact> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 

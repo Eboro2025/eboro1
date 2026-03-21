@@ -65,16 +65,6 @@ class ProductData {
         return defaultValue;
       }
 
-      double parseDouble(dynamic value, [double defaultValue = 0.0]) {
-        if (value == null) return defaultValue;
-        if (value is double) return value;
-        if (value is int) return value.toDouble();
-        if (value is String && value.trim().isNotEmpty) {
-          return double.tryParse(value) ?? defaultValue;
-        }
-        return defaultValue;
-      }
-
       return ProductData(
         id: parseInt(json['id']),
         name: json['name'],

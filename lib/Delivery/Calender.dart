@@ -38,7 +38,6 @@ class Calender2 extends State <Calender> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
     DateTime now = new DateTime.now();
     now3 = formatDate(

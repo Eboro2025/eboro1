@@ -48,7 +48,6 @@ class Delivery2 extends State <Delivery> with WidgetsBindingObserver{
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     showState();

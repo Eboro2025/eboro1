@@ -36,7 +36,6 @@ class DeliveryReport2 extends State <DeliveryReport> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 

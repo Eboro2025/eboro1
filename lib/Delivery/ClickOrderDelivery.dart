@@ -321,7 +321,6 @@ class DeliveryClickOrder2 extends State <DeliveryClickOrder> {
     //                                       'drop_address': deliveryOrder.selectedOrder.address.toString()
     //                                     }).then((response) async {
     //                                   setState(() {
-    //                                     // print(response.body);
     //                                   });
     //                                   Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) =>
     //                                       Delivery()), (Route<dynamic> route) => false);
@@ -455,7 +454,7 @@ class DeliveryClickOrder2 extends State <DeliveryClickOrder> {
                                             recognizer: TapGestureRecognizer()
                                               ..onTap = ()  async {
                                                 final availableMaps = await MapLauncher.isMapAvailable(MapType.google);
-                                                if (availableMaps != null && availableMaps) {
+                                                if (availableMaps) {
                                                   await MapLauncher.showMarker(
                                                     mapType: MapType.google,
                                                     coords: Coords(
@@ -507,7 +506,7 @@ class DeliveryClickOrder2 extends State <DeliveryClickOrder> {
                                         recognizer: TapGestureRecognizer()
                                           ..onTap = () async {
                                             final availableMaps = await MapLauncher.isMapAvailable(MapType.google);
-                                            if (availableMaps != null && availableMaps) {
+                                            if (availableMaps) {
                                               await MapLauncher.showMarker(
                                                 mapType: MapType.google,
                                                 coords: Coords(
@@ -693,7 +692,7 @@ class DeliveryClickOrder2 extends State <DeliveryClickOrder> {
                                                   child: Icon(Icons.location_on, color: myColor2, size: MyApp2.fontSize16,),
                                                   onTap: () async {
                                                     final availableMaps = await MapLauncher.isMapAvailable(MapType.google);
-                                                    if (availableMaps != null && availableMaps) {
+                                                    if (availableMaps) {
                                                       await MapLauncher.showMarker(
                                                         mapType: MapType.google,
                                                         coords: Coords(double.parse(deliveryOrder.selectedOrder!.branch!.lat!), double.parse(deliveryOrder.selectedOrder!.branch!.long!)),
@@ -854,7 +853,7 @@ class DeliveryClickOrder2 extends State <DeliveryClickOrder> {
     if (order == null || order.drop_lat == null || order.drop_long == null) return;
     try {
       final availableMaps = await MapLauncher.isMapAvailable(MapType.google);
-      if (availableMaps != null && availableMaps) {
+      if (availableMaps) {
         await MapLauncher.showDirections(
           mapType: MapType.google,
           destination: Coords(
@@ -1304,63 +1303,6 @@ class DeliveryClickOrder2 extends State <DeliveryClickOrder> {
   String formatCurrency(num val, [int pad = 10]) =>
       currencyFormat.format(val).padLeft(pad);
   NumberFormat currencyFormat = NumberFormat.currency(name: 'MYR', symbol: '');
-  Future<void> _loadTestData() async {
-    final deliveryOrder = Provider.of<DeliveryOrderProvider>(context, listen: false);
-    var id = deliveryOrder.selectedOrder!.id;
-    var timestamp = deliveryOrder.selectedOrder!.ordar_at;
-    var clientName = deliveryOrder.selectedOrder!.user!.name;
-    var clientAddress = deliveryOrder.selectedOrder!.user!.address;
-    var clientPhone = deliveryOrder.selectedOrder!.user!.mobile;
-    var itemsHeaderLeft = 'Items';
-    var itemsHeaderRight = '€';
-    var items = [
-      for(int a = 0; a < deliveryOrder.selectedOrder!.content!.length; a++)(
-          TestItem(
-              name: deliveryOrder.selectedOrder!.content![a].product!.name.toString() ,
-              price: num.parse(deliveryOrder.selectedOrder!.content![a].product!.price.toString() ),
-              quantity: num.parse(deliveryOrder.selectedOrder!.content![a].qty.toString()),
-              sauce: deliveryOrder.selectedOrder!.content![a].sauce != null ? deliveryOrder.selectedOrder!.content![a].sauce!.name : null,
-              sauce_price: deliveryOrder.selectedOrder!.content![a].sauce != null ? deliveryOrder.selectedOrder!.content![a].sauce!.price : null
-          )
-      )
-    ];
-
-    /*_printer = SunmiThermalPrinter()
-      ..bitmap(img.Image.fromBytes(
-          36,
-          36,
-          (await rootBundle.load('images/icons/logoo.png'))
-              .buffer
-              .asUint8List())
-          .getBytes())
-      ..bold()
-    // ..fontSize(height: 2, width: 2)
-      ..printCenter(deliveryOrder.selectedOrder.id.toString())
-      ..bold()
-      ..printLR('Date/Time: ', timestamp)
-      ..divider()
-      ..printLR('Client Name: ', clientName)
-      ..printLR('Client Address: ', clientAddress)
-      ..printLR('Client Mobile: ', clientPhone)
-      ..divider();
-    for (var item in items) {
-      _printer
-        ..printLeft(item.branchs)
-        ..printLR(item.name, item.price.toString() + ' €')
-        ..printLeft(item.quantity.toString() + ' x ' + item.price.toString() + ' €')
-        ..printLeft(item.sauce.toString() + ' x ' + item.sauce_price.toString() + ' €')
-        ..newLine();
-    }
-    _printer
-      ..divider()
-      ..printLR('Shipping', deliveryOrder.selectedOrder.shipping_price + ' €')
-      ..printLR('Tax', deliveryOrder.selectedOrder.tax_price + ' €')
-      ..divider()
-      ..fontSize(height: 2, width: 2)
-      ..printLR('Total', deliveryOrder.selectedOrder.total_price + ' €')
-      ..newLine()
-      ..fontScale();*/
-  }
 }
 
 class TestItem {

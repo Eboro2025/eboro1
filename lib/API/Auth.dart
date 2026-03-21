@@ -90,7 +90,6 @@ class Auth2 extends State<Auth> {
   }) async {
     Progress.progressDialogue(context);
     final String myUrl = "$globalUrl/api/login";
-    // print('DEBUG LOGIN: calling $myUrl');
     try {
       final response = await _postNoRedirect(
         myUrl,
@@ -104,19 +103,16 @@ class Auth2 extends State<Auth> {
         },
       );
 
-      // print('DEBUG LOGIN: status=${response.statusCode}');
 
       Map A;
       try {
         A = json.decode(response.body);
       } catch (e) {
-        // print('DEBUG LOGIN: JSON decode error: $e');
         show("Server ${response.statusCode}: ${response.body.substring(0, response.body.length.clamp(0, 150))}");
         return;
       }
 
       if (A['errors'] != null) {
-        // print('DEBUG LOGIN: errors=${A['errors']}');
         show(A['errors'].toString());
         return;
       }
@@ -124,7 +120,6 @@ class Auth2 extends State<Auth> {
       if (A['data'] != null) {
         MyApp2.prefs.setString('firstTime', "firstTime");
         MyApp2.token = "Bearer ${A["data"]["token"]}";
-        // print('DEBUG LOGIN: token set');
 
         // حفظ refresh token لو موجود
         if (A["data"]["refresh_token"] != null) {
@@ -146,7 +141,6 @@ class Auth2 extends State<Auth> {
         show(A['message'].toString());
       }
     } catch (e) {
-      // print('DEBUG LOGIN: EXCEPTION: $e');
       show("Si è verificato un errore durante l'accesso");
     } finally {
       // finally
@@ -169,7 +163,6 @@ class Auth2 extends State<Auth> {
     final String myUrl = "$globalUrl/api/login/social";
 
     try {
-      // print('DEBUG socialLogin');
       final response = await _postNoRedirect(
         myUrl,
         headers: {'Accept': 'application/json'},
@@ -182,7 +175,6 @@ class Auth2 extends State<Auth> {
         },
       );
 
-      // print('DEBUG socialLogin: status=${response.statusCode}');
 
       if (response.body.trimLeft().startsWith('<')) {
         if (context.mounted) Progress.dimesDialog(context);
@@ -290,7 +282,6 @@ class Auth2 extends State<Auth> {
         show("Si è verificato un errore durante l'accesso");
         return null;
       }
-      // print(B.toString());
 
       if (B['code'].toString().contains('406') ||
           response.statusCode == 406) {
@@ -354,12 +345,11 @@ class Auth2 extends State<Auth> {
         if (!context.mounted) return users;
 
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 0)),
+          MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 2)),
           (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
-      // print(e);
       show("Si è verificato un errore durante l'accesso");
     }
     return users;
@@ -477,13 +467,11 @@ class Auth2 extends State<Auth> {
         }
       } else if (response.statusCode == 401) {
         // Token منتهي - HttpInterceptor حاول يعمل refresh تلقائي
-        // print("Token still expired after refresh attempt");
         RemoveToken(context);
       } else {
         RemoveToken(context);
       }
     } catch (e) {
-      // print(e);
     }
     return users;
   }
@@ -522,12 +510,10 @@ class Auth2 extends State<Auth> {
             );
           }
 
-          // print("Token refreshed successfully");
           return true;
         }
       }
     } catch (e) {
-      // print("Error refreshing token: $e");
     }
     return false;
   }
@@ -641,7 +627,6 @@ class Auth2 extends State<Auth> {
         return true;
       }
     } catch (e) {
-      // print(e);
     }
     if (showProgress && context.mounted) Progress.dimesDialog(context);
     return false;
@@ -676,16 +661,13 @@ class Auth2 extends State<Auth> {
         final savedDeliveryAddress = UserData.deliveryAddress;
         final savedDeliveryLat = UserData.deliveryLat;
         final savedDeliveryLong = UserData.deliveryLong;
-        // print('DEBUG updateDeliveryCoords');
         user = UserData.fromJson(A['user']);
         // Restore delivery fields
         UserData.deliveryAddress = savedDeliveryAddress;
         UserData.deliveryLat = savedDeliveryLat;
         UserData.deliveryLong = savedDeliveryLong;
-        // print('DEBUG updateDeliveryCoords done');
       }
     } catch (e) {
-      // print('DEBUG updateDeliveryCoordinates error: $e');
     }
   }
 
@@ -716,7 +698,6 @@ class Auth2 extends State<Auth> {
         if (email.isNotEmpty) 'email': email,
         if (note.isNotEmpty) 'note': note,
       };
-      // print('DEBUG editUserlocationsHints');
       final response = await HttpInterceptor.post(
         myUrl,
         context: context,
@@ -728,7 +709,6 @@ class Auth2 extends State<Auth> {
         body: body,
       );
 
-      // print('DEBUG editUserlocationsHints: status=${response.statusCode}');
 
       if (response.statusCode == 200) {
         Map A = json.decode(response.body)['data'];
@@ -758,7 +738,7 @@ class Auth2 extends State<Auth> {
         if (navigate) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 0)),
+            MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 2)),
           );
         } else {
           if (showProgress) Progress.dimesDialog(context);
@@ -901,7 +881,6 @@ class Auth2 extends State<Auth> {
       },
     );
     Map C = json.decode(response.body);
-    // print(response.body);
 
     if (C["code"] == 200) {
       Progress.dimesDialog(context);
@@ -924,7 +903,7 @@ class Auth2 extends State<Auth> {
       if (lat != null && long != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 0)),
+          MaterialPageRoute(builder: (context) => const screens.MainScreen(initialIndex: 2)),
         );
       }
     } else {
@@ -946,7 +925,6 @@ class Auth2 extends State<Auth> {
       },
     );
     Map B = json.decode(response.body);
-    // print(response.body);
     show(B['message'].toString());
   }
 
@@ -983,7 +961,6 @@ class Auth2 extends State<Auth> {
       }
     } catch (e) {
       Progress.dimesDialog(context);
-      // print("Error in sendResetCode: $e");
       show("Something went wrong. Please try again.");
     }
   }
@@ -1032,7 +1009,6 @@ class Auth2 extends State<Auth> {
       }
     } catch (e) {
       Progress.dimesDialog(context);
-      // print("Error in resetPassword: $e");
       show("Something went wrong. Please try again.");
     }
   }

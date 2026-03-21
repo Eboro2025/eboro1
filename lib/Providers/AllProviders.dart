@@ -1,4 +1,5 @@
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
+import 'package:eboro/RealTime/Provider/UserOrderProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,15 +9,11 @@ import 'package:eboro/API/Provider.dart';
 
 import 'package:eboro/Helper/ProviderData.dart';
 import 'package:eboro/Helper/UserData.dart';
-import 'package:eboro/Widget/Search.dart';
 import 'package:eboro/Widget/Providers.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
-import 'package:eboro/Client/Home.dart' as client_home; // CartButton
 import 'package:eboro/Client/Addresses.dart';
 import 'package:eboro/Client/MyCart.dart';
-
-import 'package:eboro/Client/MyVideo.dart'; // MyVideo
-import 'package:eboro/Client/MyVideo.dart'; // MyVideo
+import 'package:eboro/Client/MyOrders.dart';
 
 // Location
 import 'package:geolocator/geolocator.dart';
@@ -47,6 +44,7 @@ class AllProvidersState extends State<AllProviders> {
   String? _selectedCategoryName;
   String? _selectedCategoryIdStr;
 
+
   // Filters
   double _maxDistance = 50.0; // km
   RangeValues _priceRange = RangeValues(0, 100); // euro
@@ -55,7 +53,6 @@ class AllProvidersState extends State<AllProviders> {
 
   // GPS cached state (pre-fetched in initState)
   String _gpsAddress = "";
-  bool _gpsLoading = true;
   Position? _cachedGpsPosition;
 
   // Audio player for notifications
@@ -67,18 +64,17 @@ class AllProvidersState extends State<AllProviders> {
   void initState() {
     super.initState();
 
-    // Pre-fetch GPS position in background so it's ready when bottom sheet opens
-    _prefetchGpsPosition();
-
     // Show location picker only if no delivery address is saved
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final addr = UserData.deliveryAddress;
-        if (addr == null || addr.isEmpty) {
+    final addr = UserData.deliveryAddress;
+    if (addr == null || addr.isEmpty) {
+      // Pre-fetch GPS position for bottom sheet + auto-detect location
+      _prefetchGpsPosition();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
           _autoDetectAndConfirmLocation();
         }
-      }
-    });
+      });
+    }
 
     Future.microtask(() async {
       if (!mounted) return;
@@ -87,11 +83,6 @@ class AllProvidersState extends State<AllProviders> {
         final provider =
             Provider.of<ProviderController>(context, listen: false);
 
-        // Load locally cached data immediately (without waiting for API)
-        await provider.loadFromCache();
-        // Pre-cache provider images
-        if (mounted) provider.precacheProviderImages(context);
-
         if (widget.catID != null) {
           final catIdStr = widget.catID!.toString();
           final catNameStr = widget.name?.toString() ?? "";
@@ -99,19 +90,24 @@ class AllProvidersState extends State<AllProviders> {
           _selectedCategoryIdStr = catIdStr;
           _selectedCategoryName = catNameStr;
 
-          // Update from API in background (user sees cached data immediately)
+          // Load cache first for instant display
+          await provider.loadFromCache();
+          if (mounted) provider.precacheProviderImages(context);
+
+          // Update from API in background
           await Future.wait<void>([
             Provider2.showFilter(catIdStr, catNameStr, context).then((_) {}),
             provider.Providers(catIdStr, context).then((_) {}),
           ]);
         } else {
-          // Show all providers without filtering
-          await provider.Providers(null, context);
+          // catID == null: guest mode or already loaded in go()
+          // Always fetch live from API for a real experience
+          Provider2.clearProvidersCache();
+          await provider.updateProvider(null, force: true);
         }
-        // Pre-cache images after API load
+        // Pre-cache images
         if (mounted) provider.precacheProviderImages(context);
       } catch (e) {
-        // print('❌ Error loading providers: $e');
       }
     });
   }
@@ -175,7 +171,6 @@ class AllProvidersState extends State<AllProviders> {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        _gpsLoading = false;
         if (mounted) setState(() {});
         return;
       }
@@ -193,29 +188,30 @@ class AllProvidersState extends State<AllProviders> {
             _gpsAddress = _composeAddressFromPlacemark(p);
           }
         } catch (_) {}
-        _gpsLoading = false;
-        if (mounted) setState(() {});
       }
 
-      // Second: get accurate position in background (non-blocking)
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 8),
-      );
-      _cachedGpsPosition = pos;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          pos.latitude, pos.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          final p = placemarks.first;
-          _gpsAddress = _composeAddressFromPlacemark(p);
-        }
-      } catch (_) {}
-      _gpsLoading = false;
+      // Stop loading immediately so the UI doesn't show the spinner
       if (mounted) setState(() {});
+
+      // Second: get accurate position in background (non-blocking)
+      try {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 8),
+        );
+        _cachedGpsPosition = pos;
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            pos.latitude, pos.longitude,
+          );
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            _gpsAddress = _composeAddressFromPlacemark(p);
+            if (mounted) setState(() {});
+          }
+        } catch (_) {}
+      } catch (_) {}
     } catch (_) {
-      _gpsLoading = false;
       if (mounted) setState(() {});
     }
   }
@@ -417,11 +413,11 @@ class AllProvidersState extends State<AllProviders> {
       if (!mounted) return;
 
       // Show AddAddress only on first time or when address changed
-      if (addressChanged && Auth2.user!.email != "info@eboro.com") {
+      if (addressChanged && Auth2.user?.email != "info@eboro.com") {
         final houseEmpty =
-            Auth2.user?.house == null || Auth2.user!.house!.isEmpty;
+            Auth2.user?.house == null || (Auth2.user?.house?.isEmpty ?? true);
         final mobileEmpty =
-            Auth2.user?.mobile == null || Auth2.user!.mobile!.isEmpty;
+            Auth2.user?.mobile == null || (Auth2.user?.mobile?.isEmpty ?? true);
 
         if (houseEmpty || mobileEmpty) {
           await Navigator.push(
@@ -899,19 +895,20 @@ class AllProvidersState extends State<AllProviders> {
 
       _saveToAddressHistory(address, latStr, lngStr);
 
-      // Update server coordinates
+      // Update server coordinates and reload providers with new location
       Auth2.updateDeliveryCoordinates(latStr, lngStr, context);
 
-      // Reload providers with new location
-      Provider2.clearProvidersCache();
-      final provider = Provider.of<ProviderController>(context, listen: false);
-      await provider.clearDeliveryCache();
-      await provider.updateProvider(_selectedCategoryIdStr, force: true);
-
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        // Reload providers now that we have a location
+        final provider = Provider.of<ProviderController>(context, listen: false);
+        provider.updateProvider(_selectedCategoryIdStr, force: true);
+      }
     } catch (e) {
-      // GPS failed - fallback to manual selection
-      if (mounted) _showLocationOptions();
+      // GPS failed - just refresh UI, user can tap location to change
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -972,9 +969,8 @@ class AllProvidersState extends State<AllProviders> {
 
                   // GPS location option
                   InkWell(
-                    onTap: _gpsLoading
-                        ? null
-                        : () async {
+                    onTap: () async {
+                            // GPS location tapped
                             Navigator.pop(ctx);
                             // Check GPS permission first
                             try {
@@ -1012,8 +1008,8 @@ class AllProvidersState extends State<AllProviders> {
                               ).timeout(const Duration(seconds: 10));
                               _cachedGpsPosition = pos;
 
-                              Auth2.user!.lat = pos.latitude.toString();
-                              Auth2.user!.long = pos.longitude.toString();
+                              Auth2.user?.lat = pos.latitude.toString();
+                              Auth2.user?.long = pos.longitude.toString();
 
                               // Resolve address from current coordinates every time
                               String resolvedAddress = "";
@@ -1084,9 +1080,6 @@ class AllProvidersState extends State<AllProviders> {
                             child: Text("La tua posizione",
                               style: TextStyle(fontSize: 16, color: Color(0xFF2E3333))),
                           ),
-                          if (_gpsLoading)
-                            SizedBox(width: 20, height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey.shade400)),
                         ],
                       ),
                     ),
@@ -1186,10 +1179,10 @@ class AllProvidersState extends State<AllProviders> {
 
   @override
   Widget build(BuildContext context) {
-    final fullAddress = Auth2.user!.activeAddress ?? "Select location";
+    final fullAddress = Auth2.user?.activeAddress ?? "Select location";
     final shortAddress = extractStreetOnly(fullAddress);
 
-    // No location → clean page with only map
+    // No location → show providers with location picker (no loading spinner)
     if (!_hasDeliveryLocation) {
       return SafeArea(
         child: Scaffold(
@@ -1309,26 +1302,66 @@ class AllProvidersState extends State<AllProviders> {
                   );
                 }
 
-                // If cart is empty, show the regular notification icon
-                return IconButton(
-                  icon: Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.black87,
-                    size: 26,
-                  ),
-                  onPressed: () async {
-                    try {
-                      await _notificationPlayer.stop();
-                      await _notificationPlayer.setVolume(0.3);
-                      await _notificationPlayer.play(AssetSource('sound.mp3'));
-                    } catch (e) {
-                      // print('Error playing sound: $e');
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Pagina notifiche'),
-                        duration: Duration(seconds: 1),
+                // If cart is empty, show the notification icon with active orders badge
+                return Consumer<UserOrderProvider>(
+                  builder: (context, orderProvider, _) {
+                    final activeCount = orderProvider.order?.where((o) {
+                          final s = (o.status ?? '').toLowerCase();
+                          return s == 'pending' ||
+                              s == 'in progress' ||
+                              s == 'to delivering' ||
+                              s == 'on way' ||
+                              s == 'on delivering';
+                        }).length ??
+                        0;
+
+                    return IconButton(
+                      icon: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            Icons.notifications_outlined,
+                            color: Colors.black87,
+                            size: 26,
+                          ),
+                          if (activeCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFC12732),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  activeCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
+                      onPressed: () {
+                        if (activeCount > 0) {
+                          // فيه طلبات نشطة → روح لصفحة الطلبات
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const MyOrders()),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Nessuna notifica'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
                     );
                   },
                 );

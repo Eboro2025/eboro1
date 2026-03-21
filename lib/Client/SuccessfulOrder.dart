@@ -52,7 +52,7 @@ class _SuccessfulOrderState extends State<SuccessfulOrder> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (_) => const MainScreen(initialIndex: 1),
+        builder: (_) => const MainScreen(initialIndex: 0),
       ),
       (route) => false,
     );

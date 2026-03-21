@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class Status extends StatefulWidget {
   @override
   Status2 createState() => Status2(0);
-  String?status;
+  final String?status;
   Status({Key? key,required this.status}) : super(key: key);
 }
 
@@ -15,7 +15,6 @@ class Status2 extends State <Status> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 

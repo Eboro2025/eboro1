@@ -76,41 +76,32 @@ class CashierOrderState extends State<CashierOrderWidget>
   void _openBranch() async {
     final orderProvider = Provider.of<CashierOrderProvider>(context, listen: false);
     final branchId = orderProvider.BranchStaff?[0].branch?.id;
-    // print(">>> _openBranch: branchId=$branchId, BranchStaff=${orderProvider.BranchStaff?.length}");
     if (branchId == null) {
-      // print(">>> _openBranch: branchId is NULL, cannot open");
       return;
     }
 
     final success = await CashierAPI2().toggleBranchStatus(branchId, 0);
-    // print(">>> _openBranch: toggleBranchStatus success=$success");
     if (!success) {
-      // print(">>> _openBranch: API failed, cannot open");
       return;
     }
 
     // Switch screen immediately
     if (mounted) setState(() => _isClosed = false);
-    // print(">>> _openBranch: screen switched to OPEN");
 
     // Refresh data in background
     try {
       await orderProvider.updateOrder();
       if (mounted) setState(() {});
-      // print(">>> _openBranch: data refreshed OK");
     } catch (e) {
-      // print(">>> _openBranch: updateOrder error: $e");
     }
   }
 
   void _closeBranch() async {
     final orderProvider = Provider.of<CashierOrderProvider>(context, listen: false);
     final branchId = orderProvider.BranchStaff?[0].branch?.id;
-    // print(">>> _closeBranch: branchId=$branchId");
     if (branchId == null) return;
 
     final success = await CashierAPI2().toggleBranchStatus(branchId, 1);
-    // print(">>> _closeBranch: API success=$success");
     if (player.state == PlayerState.playing) player.stop();
     setState(() => _isClosed = true);
   }

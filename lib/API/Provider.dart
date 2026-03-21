@@ -2,7 +2,6 @@ import 'package:eboro/Helper/FilterData.dart';
 import 'package:eboro/Helper/MealData.dart';
 import 'package:eboro/Helper/ProductData.dart';
 import 'package:eboro/Helper/ProviderData.dart';
-import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/Helper/TypeData.dart';
 import 'package:eboro/Widget/Search.dart';
 import 'package:eboro/Helper/JsonHelper.dart';
@@ -42,7 +41,6 @@ class Provider2 extends State<Providerr> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -56,8 +54,10 @@ class Provider2 extends State<Providerr> {
 
   static Future<List<ProviderData>?> getProviders(categoryId) async {
     try {
-      // Return cached data if fresh
-      if (provider != null &&
+      // Return cached data if fresh (only for logged-in users, not guests)
+      final isGuest = Auth2.user?.email == "info@eboro.com";
+      if (!isGuest &&
+          provider != null &&
           provider!.isNotEmpty &&
           _lastProvidersFetch != null &&
           DateTime.now().difference(_lastProvidersFetch!) <
@@ -81,7 +81,6 @@ class Provider2 extends State<Providerr> {
         body['long'] = Auth2.user!.activeLong!;
       }
 
-      // print('DEBUG getProviders');
 
       final response = await http
           .post(
@@ -114,8 +113,7 @@ class Provider2 extends State<Providerr> {
             final lastBracket = responseBody.lastIndexOf('}');
             if (lastBracket > 100) {
               jsonToParse = responseBody.substring(0, lastBracket + 1);
-              debugPrint(
-                  '🟡 [getProviders] Fixed truncated JSON at position $lastBracket');
+              // Fixed truncated JSON
             }
           }
 
@@ -129,10 +127,9 @@ class Provider2 extends State<Providerr> {
               data.map((item) => ProviderData.fromJson(item)));
 
           _lastProvidersFetch = DateTime.now();
-          debugPrint(
-              '🟢 [getProviders] Loaded ${provider?.length ?? 0} providers successfully');
+          // Providers loaded successfully
         } catch (parseError) {
-          debugPrint('🔴 [getProviders] Parse error: $parseError');
+          // Parse error
           // Keep using cached data if available
           if (provider == null || provider!.isEmpty) {
             provider = [];
@@ -140,10 +137,10 @@ class Provider2 extends State<Providerr> {
           return provider;
         }
       } else {
-        debugPrint('🔴 [getProviders] HTTP error ${response.statusCode} body: ${response.body}');
+        // HTTP error
       }
     } catch (e) {
-      debugPrint('🔴 [getProviders] Exception: $e');
+      // Exception
     }
     return provider ?? [];
   }
@@ -151,7 +148,7 @@ class Provider2 extends State<Providerr> {
   /// تنظيف cache عند الرجوع من PayPal لتجنب بيانات قديمة
   static void clearProvidersCache() {
     _lastProvidersFetch = null;
-    debugPrint('🟡 [clearProvidersCache] Cache cleared for fresh reload');
+    // Cache cleared
   }
 
   static Future<List<ProductData>?> getProducts(id) async {

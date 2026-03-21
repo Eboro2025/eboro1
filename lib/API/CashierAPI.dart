@@ -17,7 +17,6 @@ class CashierAPI2 extends State <CashierAPI> {
   static List<BranchStaffData>? branch;
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -42,11 +41,9 @@ class CashierAPI2 extends State <CashierAPI> {
       }
       else
       {
-        // print("getCart() no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return branch;
   }
@@ -75,12 +72,9 @@ class CashierAPI2 extends State <CashierAPI> {
       }
       else
       {
-        // print("getOrders() no data");
       }
 
     /* }catch (e) {
-      // print("getOrders");
-      // print(e);
     }*/
     return order;
   }
@@ -102,11 +96,9 @@ class CashierAPI2 extends State <CashierAPI> {
       }
       else
       {
-        // print("getProducts() no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return product;
   }
@@ -114,7 +106,6 @@ class CashierAPI2 extends State <CashierAPI> {
   Future<bool> toggleBranchStatus(int branchId, int status) async {
     try {
       String myUrl = "$globalUrl/api/toggle-branch-status/$branchId";
-      // print(">>> toggleBranchStatus: url=$myUrl status=$status token=${MyApp2.token?.substring(0, 20)}...");
       final response = await http.post(Uri.parse(myUrl), headers: {
         'apiLang': MyApp2.apiLang.toString(),
         'Accept': 'application/json',
@@ -122,10 +113,8 @@ class CashierAPI2 extends State <CashierAPI> {
       }, body: {
         'status': status.toString(),
       });
-      // print(">>> toggleBranchStatus: response code=${response.statusCode} body=${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}");
       return response.statusCode == 200;
     } catch (e) {
-      // print(">>> toggleBranchStatus() error: $e");
       return false;
     }
   }
@@ -151,7 +140,6 @@ class CashierAPI2 extends State <CashierAPI> {
         }
       }
     } catch (e) {
-      // print("getMyBranches() error: $e");
     }
     return null;
   }
@@ -175,7 +163,6 @@ class CashierAPI2 extends State <CashierAPI> {
       { }
 
     }catch (e) {
-      // print(e);
     }
   }
 }

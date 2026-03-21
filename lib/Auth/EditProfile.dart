@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:eboro/API/Auth.dart';
-import 'package:eboro/Client/Home.dart';
 import 'package:eboro/app_localizations.dart';
 import 'package:eboro/main.dart';
 import 'package:eboro/package/intl_phone_field/intl_phone_field.dart';
@@ -27,15 +26,28 @@ class Edit extends State<EditProfile> {
   String? base64Image;
   String? fileNames;
   File? tmpFile;
+  bool _isLoading = true;
 
   @override
   void initState() {
-    _nameController.text = Auth2.user!.name!;
-    _emailController.text = Auth2.user!.email!;
-    _phoneController.text = Auth2.user!.mobile!;
-    _addressController.text = Auth2.user!.address!;
-    _codiceFiscaleController.text = Auth2.user!.codice_fiscale ?? '';
     super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      await Auth2.getUserDetails(context);
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _nameController.text = Auth2.user?.name ?? '';
+        _emailController.text = Auth2.user?.email ?? '';
+        _phoneController.text = Auth2.user?.mobile ?? '';
+        _addressController.text = Auth2.user?.address ?? '';
+        _codiceFiscaleController.text = Auth2.user?.codice_fiscale ?? '';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<File?> chooseImage() async {
@@ -98,7 +110,7 @@ class Edit extends State<EditProfile> {
           return CircleAvatar(
             child: CircleAvatar(
                 radius: MyApp2.W! * .145,
-                backgroundImage: (Auth2.user!.image != null &&
+                backgroundImage: (Auth2.user?.image != null &&
                         Auth2.user!.image!.isNotEmpty &&
                         Auth2.user!.image!.trim().isNotEmpty)
                     ? CachedNetworkImageProvider(Auth2.user!.image!)
@@ -264,7 +276,9 @@ class Edit extends State<EditProfile> {
             style: TextStyle(color: Colors.white, fontSize: MyApp2.H! * .025)),
         iconTheme: new IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -417,7 +431,7 @@ class Edit extends State<EditProfile> {
                     // Geocode address if it changed
                     String? lat;
                     String? lng;
-                    if (_addressController.text != Auth2.user!.address) {
+                    if (_addressController.text != (Auth2.user?.address ?? '')) {
                       try {
                         final query = Uri.encodeComponent(_addressController.text);
                         final url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1';

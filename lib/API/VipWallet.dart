@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:eboro/main.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class VipWalletApi {
@@ -23,7 +22,7 @@ class VipWalletApi {
         return body['data'] as Map<String, dynamic>?;
       }
     } catch (e) {
-      debugPrint('VipWalletApi.getWallet error: $e');
+      // getWallet error
     }
     return null;
   }
@@ -41,7 +40,7 @@ class VipWalletApi {
         return body['data'] as Map<String, dynamic>?;
       }
     } catch (e) {
-      debugPrint('VipWalletApi.getTransactions error: $e');
+      // getTransactions error
     }
     return null;
   }
@@ -59,7 +58,7 @@ class VipWalletApi {
         return body['data'] as List<dynamic>?;
       }
     } catch (e) {
-      debugPrint('VipWalletApi.getReferrals error: $e');
+      // getReferrals error
     }
     return null;
   }
@@ -77,7 +76,7 @@ class VipWalletApi {
         return body['data'] as Map<String, dynamic>?;
       }
     } catch (e) {
-      debugPrint('VipWalletApi.getQrcodeUrl error: $e');
+      // getQrcodeUrl error
     }
     return null;
   }

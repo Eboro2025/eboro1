@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:eboro/API/Auth.dart';
+import 'package:eboro/API/Provider.dart';
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
 import 'package:provider/provider.dart' as prov;
 import 'package:eboro/Auth/Signup.dart';
@@ -241,22 +242,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: _handleAppleLogin,
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(16),
-                          color: Colors.white,
-                        ),
-                        child: Center(
-                          child: Image.asset('images/icons/apple.png', height: 28, width: 28),
+                    if (Platform.isIOS) ...[
+                      GestureDetector(
+                        onTap: _handleAppleLogin,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white,
+                          ),
+                          child: Center(
+                            child: Image.asset('images/icons/apple.png', height: 28, width: 28),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 20),
+                      const SizedBox(width: 20),
+                    ],
                     GestureDetector(
                       onTap: _handleGoogleLogin,
                       child: Container(
@@ -921,7 +924,6 @@ class _LoginScreenState extends State<LoginScreen> {
         AppleIdRequest(requestedScopes: [Scope.email, Scope.fullName]),
       ]);
 
-      // print('DEBUG APPLE: result.status=${result.status}');
       switch (result.status) {
         case AuthorizationStatus.authorized:
           final AppleIdCredential credential = result.credential!;
@@ -1028,7 +1030,6 @@ class _LoginScreenState extends State<LoginScreen> {
           break;
       }
     } catch (e) {
-      // print('DEBUG APPLE ERROR: $e');
       Fluttertoast.showToast(
         msg: 'Errore accesso Apple: $e',
         toastLength: Toast.LENGTH_LONG,
@@ -1100,13 +1101,19 @@ class _LoginScreenState extends State<LoginScreen> {
       type: "0",
     );
 
-    // Clear cart for fresh guest session
+    // Set delivery address so activeLat/activeLong work for delivery calculation
+    UserData.deliveryAddress = guestAddress;
+    UserData.deliveryLat = guestLat;
+    UserData.deliveryLong = guestLong;
+
+    // Clear cart and providers cache for fresh guest session
     if (mounted) {
       try {
         final cart = prov.Provider.of<CartTextProvider>(context, listen: false);
         await cart.clearCartSilent();
       } catch (_) {}
     }
+    Provider2.clearProvidersCache();
 
     await Categories2.getGuestCategories(flag: true, context: context);
   }

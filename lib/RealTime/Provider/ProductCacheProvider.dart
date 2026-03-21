@@ -61,7 +61,6 @@ class ProductCacheProvider extends ChangeNotifier {
       }
     } catch (e) {
       if (kDebugMode) {
-        // print('Error loading products for provider $providerId: $e');
       }
     } finally {
       _isLoading[providerId] = false;

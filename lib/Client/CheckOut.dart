@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
+import 'package:http/http.dart' as http;
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/API/Order.dart';
 import 'package:eboro/API/Provider.dart' as prov;
@@ -18,12 +20,13 @@ import 'package:flutter_multi_formatter/flutter_multi_formatter.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pay/pay.dart';
 
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:eboro/Widget/StripeWebViewPage.dart';
+import 'package:eboro/Client/MyCart.dart';
 
-import 'package:time_machine/time_machine.dart';
-import 'package:pay/pay.dart';
 
 class CheckOut extends StatefulWidget {
   @override
@@ -47,10 +50,13 @@ class CheckOut2 extends State<CheckOut> {
   List<ProductData> _topProducts = [];
   bool _loadingTopProducts = true;
 
+  // Apple Pay availability
+  bool _isApplePayAvailable = false;
+
   @override
   initState() {
     super.initState();
-    payment = '0';
+    payment = Platform.isAndroid ? '4' : '0';
     if (dateTime == null || dateTime == "null") {
       final now = DateTime.now().add(Duration(hours: 1));
       dateTime =
@@ -58,7 +64,22 @@ class CheckOut2 extends State<CheckOut> {
     }
     _loadSavedCard();
     _loadTopProducts();
+    _checkApplePayAvailability();
     postTest();
+  }
+
+  Future<void> _checkApplePayAvailability() async {
+    if (!Platform.isIOS) return;
+    try {
+      final payClient = Pay({
+        PayProvider.apple_pay: PaymentConfiguration.fromJsonString(
+            MyCart2.applePayConfigJson),
+      });
+      final canPay = await payClient.userCanPay(PayProvider.apple_pay);
+      if (mounted) {
+        setState(() => _isApplePayAvailable = canPay);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadTopProducts() async {
@@ -168,7 +189,6 @@ class CheckOut2 extends State<CheckOut> {
       // Format the date and time
       dateTimeString = DateFormat("y-M-d H:mm").format(dateTime);
     } catch (error) {
-      // print(error);
       // Handle the error appropriately, e.g., throw an exception or return a default value
       dateTimeString = 'Error occurred';
     }*/
@@ -521,39 +541,42 @@ class CheckOut2 extends State<CheckOut> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    // Carta (Credit Card)
-                    _buildPaymentOption(
-                      value: "1",
-                      icon: Icons.credit_card,
-                      label: 'Carta',
-                    ),
-                    // Contanti (Cash)
-                    _buildPaymentOption(
-                      value: "0",
-                      icon: Icons.money,
-                      label: 'Contanti',
-                    ),
-                    // Google Pay
-                    _buildPaymentOption(
-                      value: "3",
-                      icon: Icons.g_mobiledata,
-                      label: 'Google Pay',
-                      isGooglePay: true,
-                    ),
-                    // Apple Pay (solo su iOS)
-                    if (Platform.isIOS)
+                    // Android: only Google Pay
+                    if (Platform.isAndroid) ...[  
                       _buildPaymentOption(
                         value: "4",
-                        icon: Icons.apple,
-                        label: 'Apple Pay',
-                        isApplePay: true,
+                        icon: Icons.g_mobiledata,
+                        label: 'Google Pay',
+                        isGooglePay: true,
                       ),
-                    // PayPal
-                    _buildPaymentOption(
-                      value: "2",
-                      icon: Icons.payment,
-                      label: 'PayPal',
-                    ),
+                    ] else ...[
+                      // Carta (Credit Card)
+                      _buildPaymentOption(
+                        value: "1",
+                        icon: Icons.credit_card,
+                        label: 'Carta',
+                      ),
+                      // Contanti (Cash)
+                      _buildPaymentOption(
+                        value: "0",
+                        icon: Icons.money,
+                        label: 'Contanti',
+                      ),
+                      // Apple Pay (solo su iOS)
+                      if (_isApplePayAvailable)
+                        _buildPaymentOption(
+                          value: "3",
+                          icon: Icons.apple,
+                          label: 'Apple',
+                          isApplePay: true,
+                        ),
+                      // PayPal
+                      _buildPaymentOption(
+                        value: "2",
+                        icon: Icons.payment,
+                        label: 'PayPal',
+                      ),
+                    ],
                   ],
                 ),
                 Container(
@@ -628,8 +651,8 @@ class CheckOut2 extends State<CheckOut> {
                                     : payment == '2'
                                         ? 'PayPal'
                                         : payment == '3'
-                                            ? 'Google Pay'
-                                            : 'Apple Pay';
+                                            ? 'Apple'
+                                            : 'Google Pay';
                             String cardDisplay = '';
                             if (payment == '1' &&
                                 _cardController.text.isNotEmpty) {
@@ -652,9 +675,9 @@ class CheckOut2 extends State<CheckOut> {
                                         : payment == '1'
                                             ? Icons.credit_card
                                             : payment == '3'
-                                                ? Icons.g_mobiledata
-                                                : payment == '4'
                                                 ? Icons.apple
+                                                : payment == '4'
+                                                ? Icons.g_mobiledata
                                                 : Icons.payment,
                                     color: myColor,
                                     size: 28,
@@ -770,9 +793,9 @@ class CheckOut2 extends State<CheckOut> {
                                         : payment == '1'
                                             ? 'Conferma pagamento'
                                             : payment == '3'
-                                                ? 'Paga con Google Pay'
+                                                ? 'Paga con Apple'
                                                 : payment == '4'
-                                                    ? 'Paga con Apple Pay'
+                                                    ? 'Paga con Google Pay'
                                                     : 'Conferma ordine',
                                     style: const TextStyle(color: Colors.white),
                                   ),
@@ -788,12 +811,80 @@ class CheckOut2 extends State<CheckOut> {
                         // لو confirmed، نكمل
                         if (inClicked) {
                           inClicked = false;
-                          Progress.progressDialogue(context);
 
                           // جمع كل التعليقات من CheckOutItem
                           String allComments = CheckOutItem2.comments
                               .where((c) => c != null && c.isNotEmpty)
                               .join(', ');
+
+                          String? transactionId;
+
+                          final amountInCents = (total * 100).round();
+
+                          // Apple Pay → Stripe WebView (Apple Pay only)
+                          if (payment == '3' && Platform.isIOS) {
+                            final stripeUrl = '$globalUrl/stripe/mobile-payment?amount=$amountInCents&methods=apple_pay';
+
+                            transactionId = await Navigator.push<String>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StripeWebViewPage(url: stripeUrl),
+                              ),
+                            );
+
+                            if (transactionId == null || transactionId.isEmpty) {
+                              inClicked = true;
+                              return;
+                            }
+                          }
+                          // Google Pay → Native
+                          else if (payment == '4' && Platform.isAndroid) {
+                            try {
+                              final payClient = Pay({
+                                PayProvider.google_pay: PaymentConfiguration.fromJsonString(
+                                    MyCart2.googlePayConfigJson),
+                              });
+                              final result = await payClient.showPaymentSelector(
+                                PayProvider.google_pay,
+                                [PaymentItem(label: 'Ordine EBORO', amount: (amountInCents / 100).toStringAsFixed(2), status: PaymentItemStatus.final_price)],
+                              );
+                              final tokenData = result['paymentMethodData']?['tokenizationData']?['token'];
+                              if (tokenData != null) {
+                                final tokenJson = json.decode(tokenData);
+                                final stripeToken = tokenJson['id'];
+                                if (stripeToken != null) {
+                                  final resp = await http.post(
+                                    Uri.parse('$globalUrl/api/stripe/charge-gpay'),
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: json.encode({'token': stripeToken, 'amount': amountInCents}),
+                                  );
+                                  if (resp.statusCode == 200) {
+                                    final data = json.decode(resp.body);
+                                    if (data['success'] == true) transactionId = data['payment_intent'];
+                                  }
+                                }
+                              }
+                            } catch (_) {}
+                          }
+                          // Carta → Stripe WebView (wallets disabled - card only)
+                          else if (payment == '1') {
+                            final stripeUrl = '$globalUrl/stripe/mobile-payment?amount=$amountInCents&wallets=none';
+
+                            transactionId = await Navigator.push<String>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StripeWebViewPage(url: stripeUrl),
+                              ),
+                            );
+
+                            if (transactionId == null || transactionId.isEmpty) {
+                              // User cancelled payment
+                              inClicked = true;
+                              return;
+                            }
+                          }
+
+                          Progress.progressDialogue(context);
 
                           bool success = await Order2().makeOrder(context,
                               card: _cardController.text,
@@ -806,6 +897,7 @@ class CheckOut2 extends State<CheckOut> {
                               gratuity: _gratuityController.text.isNotEmpty
                                   ? _gratuityController.text
                                   : "",
+                              transactionId: transactionId,
                               options: "");
 
                           if (success) {
@@ -820,7 +912,6 @@ class CheckOut2 extends State<CheckOut> {
                             inClicked = true;
                           }
                         } else {
-                          // print("stop c");
                         }
                       }
                     },
@@ -862,7 +953,7 @@ class CheckOut2 extends State<CheckOut> {
                   const BorderRadius.vertical(top: Radius.circular(12)),
               child: hasImage
                   ? Image.network(
-                      imageUrl!,
+                      imageUrl,
                       height: 60,
                       width: 140,
                       fit: BoxFit.cover,
@@ -1192,11 +1283,8 @@ class _WebViewClassState extends State<WebViewClass> {
   void _checkUrl(String url) {
     if (_handled) return;
     if (!mounted) return;
-    debugPrint('🔵 [PayPal WebView] URL: $url');
-
     if (url.contains('payment-success')) {
       _handled = true;
-      debugPrint('🔵 [PayPal WebView] Payment SUCCESS detected');
       // تفريغ السلة بدون Progress dialog لتجنب crash
       try {
         final cart = Provider.of<CartTextProvider>(context, listen: false);
@@ -1211,7 +1299,7 @@ class _WebViewClassState extends State<WebViewClass> {
       }
     } else if (url.contains('cancel-payment')) {
       _handled = true;
-      debugPrint('🔵 [PayPal WebView] Payment CANCELLED');
+      // Payment cancelled
       // Clear cache عند الرجوع من PayPal لتحديث البيانات
       prov.Provider2.clearProvidersCache();
       // إرجاع فوري بدون تأخير
@@ -1241,11 +1329,11 @@ class _WebViewClassState extends State<WebViewClass> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            debugPrint('🔵 [PayPal WebView] Page finished: $url');
+            // Page finished
             _checkUrl(url);
           },
           onNavigationRequest: (NavigationRequest request) {
-            debugPrint('🔵 [PayPal WebView] Nav: ${request.url}');
+            // Navigation request
             return NavigationDecision.navigate;
           },
           onUrlChange: (UrlChange change) {
@@ -1258,14 +1346,8 @@ class _WebViewClassState extends State<WebViewClass> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        debugPrint('🔵 [PayPal WebView] User pressed back button');
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-        return false;
-      },
+    return PopScope(
+      canPop: true,
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
@@ -1273,7 +1355,7 @@ class _WebViewClassState extends State<WebViewClass> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () {
-              debugPrint('🔵 [PayPal WebView] User pressed close button');
+              // User pressed close
               if (mounted) {
                 Navigator.of(context).pop();
               }

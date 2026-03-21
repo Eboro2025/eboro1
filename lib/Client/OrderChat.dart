@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class OrderChat extends StatefulWidget {
-  @override
   final String? id;
   OrderChat({Key? key, required this.id}) : super(key: key);
   Order_order createState() => Order_order();

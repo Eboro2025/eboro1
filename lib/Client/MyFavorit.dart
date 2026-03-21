@@ -1,8 +1,9 @@
-import 'package:eboro/API/Favorite.dart';
+import 'package:eboro/RealTime/Provider/ProviderController.dart';
 import 'package:eboro/app_localizations.dart';
 import 'package:eboro/Widget/Favorits.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class MyFavorite extends StatefulWidget {
   @override
@@ -12,12 +13,14 @@ class MyFavorite extends StatefulWidget {
 class MyFavorite2 extends State<MyFavorite> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    final providerController = Provider.of<ProviderController>(context);
+    final favorites = providerController.Favorites;
+
     return SafeArea(
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -34,7 +37,7 @@ class MyFavorite2 extends State<MyFavorite> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (Favorite2.favorite == null || Favorite2.favorite!.isEmpty)
+              if (favorites == null || favorites.isEmpty)
                 Container(
                   width: MyApp2.W! * .75,
                   height: MyApp2.W! * .75,

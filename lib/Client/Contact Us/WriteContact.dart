@@ -55,7 +55,7 @@ class WriteContact2 extends State <WriteContact> {
           children: [
             ListTile(
               leading: Icon(Icons.camera_alt, color: myColor),
-              title: Text(AppLocalizations.of(context)!.translate("camera") ?? "Camera"),
+              title: Text(AppLocalizations.of(context)!.translate("camera")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImage(ImageSource.camera);
@@ -63,7 +63,7 @@ class WriteContact2 extends State <WriteContact> {
             ),
             ListTile(
               leading: Icon(Icons.photo_library, color: myColor),
-              title: Text(AppLocalizations.of(context)!.translate("gallery") ?? "Gallery"),
+              title: Text(AppLocalizations.of(context)!.translate("gallery")),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImage(ImageSource.gallery);
@@ -256,7 +256,7 @@ class WriteContact2 extends State <WriteContact> {
                       child: Text(
                         _selectedImage != null
                             ? _fileName ?? ''
-                            : (AppLocalizations.of(context)!.translate("attachphoto") ?? "Allega foto"),
+                            : AppLocalizations.of(context)!.translate("attachphoto"),
                         style: TextStyle(fontSize: MyApp2.fontSize16, color: Colors.grey),
                         overflow: TextOverflow.ellipsis,
                       ),

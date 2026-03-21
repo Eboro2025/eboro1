@@ -17,7 +17,6 @@ class Chat2 extends State <Chat> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -37,18 +36,15 @@ class Chat2 extends State <Chat> {
         'Accept': 'application/json',
         'Authorization': "${MyApp2.token}",
       });
-      // // print(response.body);
       if(response.statusCode == 200){
         Iterable A = json.decode(response.body)['data'];
         chat = List<ChatData>.from(A.map((A)=> ChatData.fromJson(A)));
       }
       else
       {
-        // print("no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return chat;
   }
@@ -75,18 +71,14 @@ class Chat2 extends State <Chat> {
         'Accept': 'application/json',
         'Authorization': MyApp2.token.toString(),
       },body: body);
-      // // print(response.body);
       if(response.statusCode == 200){
         // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => OrderChat(id: i)));
-        // print("done");
       }
       else
       {
-        // print("no data");
       }
 
     }catch (e) {
-      // print(e);
     }
     return "done";
   }

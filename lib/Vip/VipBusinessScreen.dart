@@ -77,7 +77,7 @@ class _VipBusinessScreenState extends State<VipBusinessScreen>
         });
       }
     } catch (e) {
-      debugPrint('VipBusinessScreen._loadData error: $e');
+      // Load data error
       if (mounted) setState(() => _loading = false);
     }
   }

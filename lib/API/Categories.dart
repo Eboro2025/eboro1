@@ -23,7 +23,6 @@ class Categories2 extends State <Categories> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -70,21 +69,21 @@ class Categories2 extends State <Categories> {
   static getGuestCategories({bool flag =false,context}) async {
     String myUrl = "$globalUrl/api/get/categories";
 
-    http.get(Uri.parse(myUrl), headers: {
+    final response = await http.get(Uri.parse(myUrl), headers: {
       'apiLang' : MyApp2.apiLang??'it',
       'Accept': 'application/json',
       'Authorization': MyApp2.token??"",
-    }).then((response) async {
-      Iterable A = json.decode(response.body)['data'];
-      categories = List<CategoryData>.from(A.map((A)=> CategoryData.fromJson(A)));
-      if(flag)
-      {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AllProviders(catID: null, name: null)),
-        );
-      }
     });
+
+    Iterable A = json.decode(response.body)['data'];
+    categories = List<CategoryData>.from(A.map((A)=> CategoryData.fromJson(A)));
+    if(flag)
+    {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AllProviders(catID: null, name: null)),
+      );
+    }
   }
 
 

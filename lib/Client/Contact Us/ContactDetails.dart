@@ -6,7 +6,6 @@ import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
 
 class ContactDetails extends StatefulWidget {
-  @override
   final int? id;
   final String? subject;
   ContactDetails({Key? key, this.id, this.subject}) : super(key: key);
@@ -16,7 +15,6 @@ class ContactDetails extends StatefulWidget {
 class ContactDetails2 extends State<ContactDetails> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 

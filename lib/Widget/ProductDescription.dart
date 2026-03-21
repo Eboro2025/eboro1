@@ -28,7 +28,6 @@ class ProductDescription2 extends State<ProductDescription> {
   @override
   void initState() {
     super.initState();
-    // print(widget.productID);
   }
 
   bool get hasAnySelection {
@@ -54,7 +53,6 @@ class ProductDescription2 extends State<ProductDescription> {
       } else {
         selectedExtras[groupName] = set;
       }
-      // print('📋 selections: $selectedExtras');
     });
   }
 
@@ -103,7 +101,6 @@ class ProductDescription2 extends State<ProductDescription> {
                           mode: LaunchMode.externalApplication);
                     } catch (e) {
                       Auth2.show('Errore apertura WhatsApp');
-                      // print('WhatsApp error: $e');
                     }
                   },
                 ),
@@ -121,7 +118,6 @@ class ProductDescription2 extends State<ProductDescription> {
                       await launchUrl(uri);
                     } catch (e) {
                       Auth2.show('Errore apertura Email');
-                      // print('Email error: $e');
                     }
                   },
                 ),
@@ -138,7 +134,6 @@ class ProductDescription2 extends State<ProductDescription> {
                       await launchUrl(uri);
                     } catch (e) {
                       Auth2.show('Errore apertura SMS');
-                      // print('SMS error: $e');
                     }
                   },
                 ),
@@ -497,9 +492,7 @@ class ProductDescription2 extends State<ProductDescription> {
                     product.additions.toString().trim().isNotEmpty &&
                     product.additions.toString() != '[]') {
                   try {
-                    // print('📦 additions raw: ${product.additions}');
                     final parsed = jsonDecode(product.additions.toString());
-                    // print('📦 additions parsed type: ${parsed.runtimeType}');
 
                     if (parsed is List && parsed.isNotEmpty) {
                       for (var i = 0; i < parsed.length; i++) {
@@ -583,7 +576,6 @@ class ProductDescription2 extends State<ProductDescription> {
                       return extraWidgets;
                     }
                   } catch (e) {
-                    // print('Error parsing additions: $e');
                   }
                 }
 

@@ -47,7 +47,6 @@ class PremiumApi {
         return _cachedPremiumIds ?? [];
       }
     } catch (e) {
-      // print('Error loading premium provider IDs: $e');
       return _cachedPremiumIds ?? [];
     }
   }

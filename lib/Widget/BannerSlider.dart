@@ -62,7 +62,6 @@ class _BannerSliderState extends State<BannerSlider> {
   Future<void> _loadBanners() async {
     try {
       final banners = await BannerApi.getActiveBanners();
-      // print('📢 BannerSlider: ${banners.length} banners');
       if (!mounted) return;
       setState(() {
         _banners = banners;
@@ -72,7 +71,6 @@ class _BannerSliderState extends State<BannerSlider> {
         _startAutoScroll();
       }
     } catch (e) {
-      // print('❌ BannerSlider error: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -136,7 +134,6 @@ class _BannerSliderState extends State<BannerSlider> {
       }
     }
 
-    // print('🔧 EditBanner: banner=${banner.id}, existingIds=$existingIds, allProviders=${allProviders.length}');
 
     showModalBottomSheet(
       context: context,
@@ -267,7 +264,6 @@ class _BannerSliderState extends State<BannerSlider> {
                                     .map((e) => e.key)
                                     .toList();
 
-                                // print('💾 Saving banner ${banner.id} providers: $selectedIds');
 
                                 Navigator.pop(ctx);
                                 final success = await BannerApi.updateBannerProviders(

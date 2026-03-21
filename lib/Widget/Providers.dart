@@ -38,6 +38,7 @@ class Providers extends StatefulWidget {
 
 class Providers2 extends State<Providers> {
   Timer? _timer;
+  bool _didTriggerLocationPicker = false;
 
   int selectedTypeFilter = 0; // Types row: 0=All, 1+=Types
   int selectedFilter = 0; // Offers row: 0=Tutti, 1=Free delivery, etc.
@@ -231,7 +232,6 @@ class Providers2 extends State<Providers> {
       }
     } catch (e) {
       if (kDebugMode) {
-        // print('Error loading premium providers: $e');
       }
     }
   }
@@ -279,7 +279,6 @@ class Providers2 extends State<Providers> {
       }
     } catch (e) {
       if (kDebugMode) {
-        // print('Error loading daily special providers: $e');
       }
     }
   }
@@ -305,7 +304,6 @@ class Providers2 extends State<Providers> {
       });
     } catch (e) {
       if (kDebugMode) {
-        // print('Error loading offer banners: $e');
       }
     }
   }
@@ -353,7 +351,6 @@ class Providers2 extends State<Providers> {
       await provider.updateProvider(provider.categoryId);
     } catch (e) {
       if (kDebugMode) {
-        // print('❌ updateProvider error: $e');
       }
     } finally {
       _updating = false;
@@ -506,13 +503,7 @@ class Providers2 extends State<Providers> {
     final bool hasActiveFilter = _selectedFilterKey.isNotEmpty;
     final bool hasLocation = _userHasValidLocation();
 
-    // No location set → auto-open full map picker
-    if (!hasLocation) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_userHasValidLocation()) widget.onSelectLocation?.call();
-      });
-      return const Center(child: CircularProgressIndicator());
-    }
+    // No location set → skip auto-trigger, let user tap to select location
 
     return ListView(
       controller: _scrollController,
@@ -611,6 +602,25 @@ class Providers2 extends State<Providers> {
                 providerController: provider,
                 cart: cart,
               ),
+            ),
+
+          // Section 0: Favorites (I tuoi preferiti)
+          if (provider.Favorites != null && provider.Favorites!.isNotEmpty)
+            _buildHorizontalSection(
+              title: "I tuoi preferiti",
+              emoji: "\u2764\uFE0F",
+              providers: provider.Favorites!
+                  .where((f) => f.provider != null)
+                  .map((f) => f.provider!)
+                  .where((p) => p.state != '2')
+                  .toList()
+                ..sort((a, b) {
+                  final aOpen = a.state == '1' ? 0 : 1;
+                  final bOpen = b.state == '1' ? 0 : 1;
+                  return aOpen.compareTo(bOpen);
+                }),
+              providerController: provider,
+              cart: cart,
             ),
 
           // Section 1: Premium (Paid subscription)
@@ -1665,7 +1675,6 @@ class Providers2 extends State<Providers> {
       }
     } catch (e) {
       if (kDebugMode) {
-        // print('❌ Error applying filter: $e');
       }
       filtered = List.from(allProviders);
     }

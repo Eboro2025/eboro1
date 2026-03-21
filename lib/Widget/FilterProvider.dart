@@ -1,13 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:eboro/API/Auth.dart';
-import 'package:eboro/API/Favorite.dart';
 import 'package:eboro/Helper/ImageHelper.dart';
 import 'package:eboro/API/Provider.dart';
 import 'package:eboro/API/Rates.dart';
 import 'package:eboro/Helper/FilterData.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
-import 'package:eboro/Widget/Progress.dart';
 import 'package:eboro/main.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -21,7 +19,6 @@ class FilterProvider extends StatefulWidget {
 class FilterProvider2 extends State<FilterProvider> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -182,12 +179,8 @@ class FilterProvider2 extends State<FilterProvider> {
                                                   size: MyApp2.W! * .06,
                                                 ),
                                           onTap: () async {
-                                            Progress.progressDialogue(context);
-                                            Favorite2.removeFromFavorite(
-                                                filter.providers!.id, context);
-                                            await provider.updateProvider(
-                                                provider.categoryId);
-                                            Progress.dimesDialog(context);
+                                            await provider.toggleFavorite(
+                                                filter.providers!, context);
                                           },
                                         ),
                                         padding:

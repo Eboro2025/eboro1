@@ -16,7 +16,6 @@ class Rates2 extends State<Rates> {
 
   @override
   initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -41,7 +40,6 @@ class Rates2 extends State<Rates> {
         }
       });
     } catch (error) {
-      // print('❌ getRates error: $error');
     }
   }
 
@@ -57,7 +55,6 @@ class Rates2 extends State<Rates> {
       'comment': "${comment}"
     }).then((response) async {
       getRates();
-      // print("Ratesfsfds${response.body} : ${id}");
       // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderScreen(catID: widget.catID,name: widget.name,)));
     });
   }

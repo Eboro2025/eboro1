@@ -7,9 +7,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  if (kDebugMode) {
-    print('Background message: ${message.messageId}');
-  }
 }
 
 class NotificationService {
@@ -37,27 +34,18 @@ class NotificationService {
   );
 
   static Future<void> initialize() async {
-    if (!_isMessagingSupported) {
-      if (kDebugMode) {
-        print('NotificationService: platform not supported');
-      }
-      return;
-    }
+    if (!_isMessagingSupported) return;
 
     // Register background handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     // Request permission (iOS + Android 13+)
-    NotificationSettings settings = await _messaging.requestPermission(
+    await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
       provisional: false,
     );
-
-    if (kDebugMode) {
-      print('Notification permission: ${settings.authorizationStatus}');
-    }
 
     if (_isLocalNotificationsSupported) {
       // Create Android notification channel
@@ -84,11 +72,7 @@ class NotificationService {
 
       await _localNotifications.initialize(
         initSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) {
-          if (kDebugMode) {
-            print('Notification tapped: ${response.payload}');
-          }
-        },
+        onDidReceiveNotificationResponse: (_) {},
       );
     }
 
@@ -103,32 +87,18 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
     // Listen for notification tap (app was in background)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (kDebugMode) {
-        print('Notification opened app: ${message.data}');
-      }
-    });
+    FirebaseMessaging.onMessageOpenedApp.listen((_) {});
 
     // Get FCM token
     try {
-      String? token = await _messaging.getToken();
-      if (kDebugMode) {
-        print('FCM Token: $token');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error getting FCM token: $e');
-      }
-    }
+      await _messaging.getToken();
+    } catch (_) {}
   }
 
   static Future<String?> getToken() async {
     try {
       return await _messaging.getToken();
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error getting FCM token: $e');
-      }
+    } catch (_) {
       return null;
     }
   }
@@ -165,12 +135,7 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    if (!_isLocalNotificationsSupported) {
-      if (kDebugMode) {
-        print('Local notifications not supported on this platform');
-      }
-      return;
-    }
+    if (!_isLocalNotificationsSupported) return;
     await _localNotifications.show(
       DateTime.now().millisecondsSinceEpoch.remainder(100000),
       title,

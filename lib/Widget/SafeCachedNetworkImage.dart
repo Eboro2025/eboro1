@@ -32,7 +32,7 @@ class SafeCachedNetworkImage extends StatelessWidget {
       return fixedUrl.isNotEmpty &&
           (fixedUrl.startsWith('http://') || fixedUrl.startsWith('https://'));
     } catch (e) {
-      debugPrint('⚠️ [SafeCachedNetworkImage] URL validation failed: $e');
+      // URL validation failed
       return false;
     }
   }
@@ -40,8 +40,7 @@ class SafeCachedNetworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_isValidUrl(imageUrl)) {
-      debugPrint(
-          '🟡 [SafeCachedNetworkImage] Invalid URL, showing placeholder: $imageUrl');
+      // Invalid URL, showing placeholder
       return _buildPlaceholder();
     }
 
@@ -64,7 +63,7 @@ class SafeCachedNetworkImage extends StatelessWidget {
           },
       errorWidget: errorWidget ??
           (context, url, error) {
-            debugPrint('🔴 [SafeCachedNetworkImage] Failed to load: $url');
+            // Failed to load image
             return _buildPlaceholder();
           },
     );

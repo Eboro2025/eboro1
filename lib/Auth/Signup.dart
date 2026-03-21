@@ -384,7 +384,7 @@ class SignupScreen2 extends State<SignupScreen> {
                     ),
                     suggestionsCallback: (pattern) async {
                       final suggestions = await getSuggestion(pattern);
-                      return suggestions ?? [];
+                      return suggestions;
                     },
                     itemBuilder: (context, suggestion) {
                       return ListTile(

@@ -33,7 +33,6 @@ class CalenderDayClicked2 extends State <CalenderDayClicked> {
 
   @override
   initState() {
-    // TODO: implement initState
     timer();
     super.initState();
   }
