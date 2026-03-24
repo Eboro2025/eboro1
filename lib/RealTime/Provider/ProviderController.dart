@@ -281,13 +281,26 @@ class ProviderController with ChangeNotifier {
   }
 
   updateProvider(categoryId, {bool force = false}) async {
-    // لو فيه تحميل شغال، استنى يخلص بدل ما نتجاهل
-    if (_isLoadingProviders && !force) {
-      if (_providersCompleter != null) {
-        await _providersCompleter!.future;
+    // لو فيه تحميل شغال، تخطى بس لو مش force
+    if (_isLoadingProviders) {
+      if (force) {
+        // انتظر الطلب الحالي يخلص ثم كمل
+        if (_providersCompleter != null) {
+          await _providersCompleter!.future;
+        }
+      } else {
+        if (_providersCompleter != null) {
+          await _providersCompleter!.future;
+        }
+        return;
       }
-      return;
     }
+
+    // Force: clear API cache to get fresh data from server
+    if (force) {
+      Provider2.clearCache();
+    }
+
     _isLoadingProviders = true;
     _providersCompleter = Completer<void>();
     notifyListeners(); // Initial loading state

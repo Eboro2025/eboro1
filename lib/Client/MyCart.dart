@@ -1514,6 +1514,7 @@ class MyCart2 extends State<MyCart> {
           builder: (_) => StripeWebViewPage(
             url: url,
             preloadedController: preloaded,
+            hideApplePay: disableWallets,
           ),
         ),
       );

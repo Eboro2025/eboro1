@@ -24,6 +24,7 @@ import 'package:eboro/Widget/Progress.dart';
 
 // Audio Player for notifications
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
 import 'dart:convert';
 
 class AllProviders extends StatefulWidget {
@@ -58,6 +59,9 @@ class AllProvidersState extends State<AllProviders> {
   // Audio player for notifications
   final AudioPlayer _notificationPlayer = AudioPlayer();
 
+  // Auto-refresh timer for providers
+  Timer? _refreshTimer;
+
   // Pulsing animation removed — was causing 60 rebuilds/sec across all pages
 
   @override
@@ -75,6 +79,14 @@ class AllProvidersState extends State<AllProviders> {
         }
       });
     }
+
+    // Auto-refresh providers every 10 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted) return;
+      final provider = Provider.of<ProviderController>(context, listen: false);
+      Provider2.clearCache();
+      provider.updateProvider(_selectedCategoryIdStr, force: true);
+    });
 
     Future.microtask(() async {
       if (!mounted) return;
@@ -114,7 +126,8 @@ class AllProvidersState extends State<AllProviders> {
 
   @override
   void dispose() {
-    _notificationPlayer.dispose(); // Clean up audio player
+    _refreshTimer?.cancel();
+    _notificationPlayer.dispose();
     super.dispose();
   }
 

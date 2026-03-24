@@ -52,6 +52,11 @@ class Provider2 extends State<Providerr> {
   static DateTime? _lastProvidersFetch;
   static const Duration _cacheValidDuration = Duration(minutes: 5);
 
+  static void clearCache() {
+    _lastProvidersFetch = null;
+    provider = null;
+  }
+
   static Future<List<ProviderData>?> getProviders(categoryId) async {
     try {
       // Return cached data if fresh (only for logged-in users, not guests)

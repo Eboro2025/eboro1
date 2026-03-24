@@ -165,8 +165,8 @@ class Providers2 extends State<Providers> {
   void initState() {
     super.initState();
 
-    // Reduce update frequency (instead of 60 seconds)
-    _startTimer(120);
+    // Auto-refresh every 10 seconds
+    _startTimer(10);
 
     // ✅ reset filteredProviders once after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -347,8 +347,20 @@ class Providers2 extends State<Providers> {
     if (_updating) return;
     _updating = true;
     try {
+      print('[AUTO-REFRESH] Refreshing providers...');
       final provider = Provider.of<ProviderController>(context, listen: false);
-      await provider.updateProvider(provider.categoryId);
+      await provider.updateProvider(provider.categoryId, force: true);
+      // Clear cached lists so UI rebuilds with new state
+      _cachedFilteredList = null;
+      _cachedPremiumList = null;
+      _cachedPopularList = null;
+      _cachedDailySpecialList = null;
+      _cachedOffersList = null;
+      _cachedChosenForYou = null;
+      _lastComputedSourceLength = -1;
+      if (mounted) setState(() {});
+      final suzzani = provider.providers?.where((p) => p.id == 88).firstOrNull;
+      print('[AUTO-REFRESH] Done. Count: ${provider.providers?.length} | suzzani state: ${suzzani?.state} next: ${suzzani?.nextOpeningTime}');
     } catch (e) {
       if (kDebugMode) {
       }
@@ -384,7 +396,12 @@ class Providers2 extends State<Providers> {
           return const SkeletonLoading();
         }
 
-        return _buildContent(provider, cart, sourceList);
+        return RefreshIndicator(
+          onRefresh: () async {
+            await provider.updateProvider(provider.categoryId, force: true);
+          },
+          child: _buildContent(provider, cart, sourceList),
+        );
       },
     );
   }

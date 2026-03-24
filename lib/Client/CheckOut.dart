@@ -562,14 +562,6 @@ class CheckOut2 extends State<CheckOut> {
                         icon: Icons.money,
                         label: 'Contanti',
                       ),
-                      // Apple Pay (solo su iOS)
-                      if (_isApplePayAvailable)
-                        _buildPaymentOption(
-                          value: "3",
-                          icon: Icons.apple,
-                          label: 'Apple',
-                          isApplePay: true,
-                        ),
                       // PayPal
                       _buildPaymentOption(
                         value: "2",
@@ -873,7 +865,7 @@ class CheckOut2 extends State<CheckOut> {
                             transactionId = await Navigator.push<String>(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => StripeWebViewPage(url: stripeUrl),
+                                builder: (_) => StripeWebViewPage(url: stripeUrl, hideApplePay: true),
                               ),
                             );
 

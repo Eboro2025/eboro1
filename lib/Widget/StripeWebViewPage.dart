@@ -8,7 +8,8 @@ import 'package:eboro/main.dart';
 class StripeWebViewPage extends StatefulWidget {
   final String url;
   final WebViewController? preloadedController;
-  const StripeWebViewPage({super.key, required this.url, this.preloadedController});
+  final bool hideApplePay;
+  const StripeWebViewPage({super.key, required this.url, this.preloadedController, this.hideApplePay = false});
 
   @override
   State<StripeWebViewPage> createState() => _StripeWebViewPageState();
@@ -35,6 +36,37 @@ class _StripeWebViewPageState extends State<StripeWebViewPage> {
           onPageFinished: (String url) {
             if (mounted) setState(() { _isLoading = false; });
             _checkForSuccess(url);
+            if (widget.hideApplePay) {
+              _controller.runJavaScript("""
+                (function() {
+                  function hideApplePay() {
+                    // Hide by element type
+                    var applePayBtn = document.querySelector('apple-pay-button');
+                    if (applePayBtn) applePayBtn.style.display = 'none';
+
+                    // Hide all buttons containing Apple Pay text or logo
+                    document.querySelectorAll('button').forEach(function(btn) {
+                      if (btn.textContent.includes('Apple Pay') || btn.innerHTML.includes('apple') || btn.innerHTML.includes('Apple')) {
+                        btn.closest('div') && (btn.closest('div').style.display = 'none');
+                        btn.style.display = 'none';
+                      }
+                    });
+
+                    // CSS fallback
+                    if (!document.getElementById('hide-apple-pay-style')) {
+                      var styles = document.createElement('style');
+                      styles.id = 'hide-apple-pay-style';
+                      styles.textContent = 'apple-pay-button, [data-testid*="apple"], [class*="applePay"], [class*="apple-pay"], [class*="ApplePay"], .PaymentRequestButton, [data-payment-method-type="apple_pay"] { display: none !important; }';
+                      document.head.appendChild(styles);
+                    }
+                  }
+                  hideApplePay();
+                  setTimeout(hideApplePay, 500);
+                  setTimeout(hideApplePay, 1500);
+                  setTimeout(hideApplePay, 3000);
+                })();
+              """);
+            }
           },
           onWebResourceError: (WebResourceError error) {
             if (error.isForMainFrame == true) {
