@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'package:eboro/Helper/PlatformInfo.dart';
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/Helper/UserData.dart';
 import 'package:eboro/API/Categories.dart';
@@ -42,7 +42,8 @@ void main() async {
     final firebaseReady = await _safeInitFirebase();
     if (firebaseReady) {
       try {
-        await NotificationService.initialize();
+        await NotificationService.initialize()
+            .timeout(const Duration(seconds: 10));
       } catch (_) {}
     }
   }
@@ -57,7 +58,10 @@ void main() async {
 
 Future<bool> _safeInitFirebase() async {
   try {
-    await Firebase.initializeApp();
+    // On the web the Firebase JS SDK is fetched from a CDN. If that request
+    // never resolves (offline, blocked host) the future below never completes
+    // and the app is stuck on a blank screen before runApp, so cap the wait.
+    await Firebase.initializeApp().timeout(const Duration(seconds: 10));
     return Firebase.apps.isNotEmpty;
   } on PlatformException catch (e) {
     if (kDebugMode) {
@@ -448,7 +452,7 @@ class MyApp2 extends State<MyHomePage> {
           actions: [
             TextButton(
               onPressed: () {
-                final url = Platform.isIOS
+                final url = isIOSPlatform
                     ? 'https://apps.apple.com/app/eboro/id6670428798'
                     : 'https://play.google.com/store/apps/details?id=com.codiano.eboro';
                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

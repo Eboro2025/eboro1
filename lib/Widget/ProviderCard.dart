@@ -332,7 +332,7 @@ class ProviderCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(
+                child: FaIcon(
                   isFav
                       ? FontAwesomeIcons.heartCircleMinus
                       : FontAwesomeIcons.heartCircleCheck,

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'package:eboro/Helper/PlatformInfo.dart';
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/API/Order.dart';
 import 'package:eboro/API/Provider.dart';
@@ -192,7 +192,7 @@ class MyCart2 extends State<MyCart> {
       // Initialize payment providers
 
       // Check Apple Pay availability (iOS only)
-      if (Platform.isIOS) {
+      if (isIOSPlatform) {
         try {
           _payClient = Pay({
             PayProvider.apple_pay:
@@ -211,7 +211,7 @@ class MyCart2 extends State<MyCart> {
       }
 
     } catch (_) {
-      if (Platform.isIOS && mounted) setState(() => _isApplePayAvailable = true);
+      if (isIOSPlatform && mounted) setState(() => _isApplePayAvailable = true);
     }
   }
 
@@ -584,7 +584,7 @@ class MyCart2 extends State<MyCart> {
                   value: '2',
                 ),
                 // Google Pay - Android only (uses Stripe Checkout)
-                if (Platform.isAndroid) ...[
+                if (isAndroidPlatform) ...[
                   const SizedBox(width: 10),
                   _buildPaymentOption(
                     title: 'Google Pay',
@@ -1386,7 +1386,7 @@ class MyCart2 extends State<MyCart> {
                 }
 
                 // Apple Pay → Stripe WebView (Apple Pay only)
-                if (paymentMethod == "3" && Platform.isIOS) {
+                if (paymentMethod == "3" && isIOSPlatform) {
                   final providerId = (cart.cart?.cart_items != null &&
                           cart.cart!.cart_items!.isNotEmpty)
                       ? cart.cart!.cart_items!.first.provider_id
@@ -1401,7 +1401,7 @@ class MyCart2 extends State<MyCart> {
                 }
 
                 // Google Pay → Chrome Custom Tab with GPay page
-                if (paymentMethod == "4" && Platform.isAndroid) {
+                if (paymentMethod == "4" && isAndroidPlatform) {
                   final amountInCents = (total * 100).round();
                   final gpayUrl = Uri.parse('$globalUrl/stripe/gpay?amount=$amountInCents');
 

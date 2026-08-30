@@ -190,7 +190,7 @@ class Favorites2 extends State<Favorites> {
                                     padding:
                                         const EdgeInsets.only(top: 5, right: 5),
                                     child: GestureDetector(
-                                      child: Icon(
+                                      child: FaIcon(
                                         FontAwesomeIcons.heartCircleMinus,
                                         color: Colors.red,
                                         size: MyApp2.W! * .06,

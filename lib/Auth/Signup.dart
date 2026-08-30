@@ -419,12 +419,12 @@ class SignupScreen2 extends State<SignupScreen> {
                       padding: EdgeInsetsDirectional.only(end: 12.0),
                       child: GestureDetector(
                         child: _obscureText
-                            ? Icon(
+                            ? FaIcon(
                                 FontAwesomeIcons.eyeSlash,
                                 color: Color(0xFFCBCBCB),
                                 size: MyApp2.fontSize16,
                               )
-                            : Icon(
+                            : FaIcon(
                                 FontAwesomeIcons.eye,
                                 color: Color(0xFFCBCBCB),
                                 size: MyApp2.fontSize16,
@@ -469,12 +469,12 @@ class SignupScreen2 extends State<SignupScreen> {
                         padding: EdgeInsetsDirectional.only(end: 12.0),
                         child: GestureDetector(
                           child: _obscureText
-                              ? Icon(
+                              ? FaIcon(
                                   FontAwesomeIcons.eyeSlash,
                                   color: Color(0xFFCBCBCB),
                                   size: MyApp2.fontSize16,
                                 )
-                              : Icon(
+                              : FaIcon(
                                   FontAwesomeIcons.eye,
                                   color: Color(0xFFCBCBCB),
                                   size: MyApp2.fontSize16,

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'package:eboro/Helper/PlatformInfo.dart';
 import 'package:http/http.dart' as http;
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/API/Order.dart';
@@ -56,7 +56,7 @@ class CheckOut2 extends State<CheckOut> {
   @override
   initState() {
     super.initState();
-    payment = Platform.isAndroid ? '4' : '0';
+    payment = isAndroidPlatform ? '4' : '0';
     if (dateTime == null || dateTime == "null") {
       final now = DateTime.now().add(Duration(hours: 1));
       dateTime =
@@ -69,7 +69,7 @@ class CheckOut2 extends State<CheckOut> {
   }
 
   Future<void> _checkApplePayAvailability() async {
-    if (!Platform.isIOS) return;
+    if (!isIOSPlatform) return;
     try {
       final payClient = Pay({
         PayProvider.apple_pay: PaymentConfiguration.fromJsonString(
@@ -542,7 +542,7 @@ class CheckOut2 extends State<CheckOut> {
                   runSpacing: 8,
                   children: [
                     // Android: only Google Pay
-                    if (Platform.isAndroid) ...[  
+                    if (isAndroidPlatform) ...[  
                       _buildPaymentOption(
                         value: "4",
                         icon: Icons.g_mobiledata,
@@ -814,7 +814,7 @@ class CheckOut2 extends State<CheckOut> {
                           final amountInCents = (total * 100).round();
 
                           // Apple Pay → Stripe WebView (Apple Pay only)
-                          if (payment == '3' && Platform.isIOS) {
+                          if (payment == '3' && isIOSPlatform) {
                             final stripeUrl = '$globalUrl/stripe/mobile-payment?amount=$amountInCents&methods=apple_pay';
 
                             transactionId = await Navigator.push<String>(
@@ -830,7 +830,7 @@ class CheckOut2 extends State<CheckOut> {
                             }
                           }
                           // Google Pay → Native
-                          else if (payment == '4' && Platform.isAndroid) {
+                          else if (payment == '4' && isAndroidPlatform) {
                             try {
                               final payClient = Pay({
                                 PayProvider.google_pay: PaymentConfiguration.fromJsonString(

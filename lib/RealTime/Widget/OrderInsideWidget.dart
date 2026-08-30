@@ -82,6 +82,18 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
     return totalMinutes;
   }
 
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours > 0) return '$hours h $minutes min';
+    return '$minutes min';
+  }
+
+  String _formatDistance(int meters) {
+    if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
+    return '$meters m';
+  }
+
   double _degToRad(double deg) => deg * (pi / 180.0);
 
   double _distanceInMeters(LatLng a, LatLng b) {
@@ -1362,17 +1374,16 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
                                 liteModeEnabled: false,
                                 updatePolylinesOnDriverLocUpdate: true,
                                 totalTimeCallback: (time) {
-                                  final safeTime = time ?? '';
-                                  setState(() => orderTimeText = safeTime);
+                                  setState(() => orderTimeText = _formatDuration(time));
                                   if (statusLower == 'on way' || statusLower == 'on delivering') {
-                                    final sec = _convertToMinutes(safeTime) * 60;
+                                    final sec = time.inSeconds;
                                     if (sec > 0) {
                                       _startCountdownSeconds(sec, mode: 'eta');
                                     }
                                   }
                                 },
                                 totalDistanceCallback: (distance) {
-                                  setState(() => orderDistance = distance);
+                                  setState(() => orderDistance = _formatDistance(distance));
                                 },
                               ),
                       ),

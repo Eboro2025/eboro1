@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:eboro/Helper/PlatformInfo.dart';
 import 'package:eboro/API/Auth.dart';
 import 'package:eboro/API/Provider.dart';
 import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
@@ -242,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (Platform.isIOS) ...[
+                    if (isIOSPlatform) ...[
                       GestureDetector(
                         onTap: _handleAppleLogin,
                         child: Container(
@@ -816,7 +816,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Progress.progressDialogue(context);
     final googleSignIn = GoogleSignIn.instance;
     try {
-      if (Platform.isIOS) {
+      if (isIOSPlatform) {
         await googleSignIn.initialize(
           clientId: "646379856639-aml1v59cmi535kga9ojqi53l84rrvldd.apps.googleusercontent.com",
         );
