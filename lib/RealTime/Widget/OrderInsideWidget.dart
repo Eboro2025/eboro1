@@ -61,27 +61,6 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
 
   // ---------------- Helpers ---------------- //
 
-  int _convertToMinutes(String timeText) {
-    final normalized = timeText
-        .toLowerCase()
-        .replaceAll('mins', 'min')
-        .replaceAll('minutes', 'min')
-        .replaceAll('min.', 'min')
-        .replaceAll('hrs', 'h')
-        .replaceAll('hours', 'h');
-
-    final hoursRegex = RegExp(r'(\d+)\s*h');
-    final minutesRegex = RegExp(r'(\d+)\s*min');
-
-    final hours = int.parse(hoursRegex.firstMatch(normalized)?.group(1) ?? '0');
-    final minutes =
-        int.parse(minutesRegex.firstMatch(normalized)?.group(1) ?? '0');
-
-    int totalMinutes = (hours * 60) + minutes;
-    if (totalMinutes < 0) totalMinutes = 0;
-    return totalMinutes;
-  }
-
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -1268,9 +1247,15 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
         (statusLower == 'delivered' || statusLower == 'complete');
     final orderId = selfOrder.id ?? 0;
 
+    // The API returns the ratings already stored for this order; if one is
+    // there the sheet must never come back, on this device or any other.
+    final alreadyRated = selfOrder.Rate?.isNotEmpty ?? false;
+
     final shouldShowRate = isDeliveredNow &&
         wasLower != statusLower &&
         orderId != 0 &&
+        !alreadyRated &&
+        orderProvider.shownRateLoaded &&
         !orderProvider.hasShownRate(orderId);
 
     if (shouldShowRate) {
@@ -1302,8 +1287,12 @@ class _OrderInsideWidgetState extends State<OrderInsideWidget> {
       });
     }
 
-    // Important: update last status
-    _lastStatus = selfOrder.status;
+    // Important: update last status. Held back until the persisted rating
+    // history is available, so an early build cannot consume the
+    // not-delivered -> delivered transition the sheet is triggered by.
+    if (orderProvider.shownRateLoaded) {
+      _lastStatus = selfOrder.status;
+    }
 
     // ETA text displayed (same as cashier)
     String etaText() {

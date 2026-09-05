@@ -10,6 +10,7 @@ import 'package:eboro/Helper/ChatData.dart';
 import 'package:eboro/Helper/OrderData.dart';
 import 'package:eboro/Widget/Progress.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserOrderProvider with ChangeNotifier {
   List<OrderData>? order;
@@ -19,13 +20,57 @@ class UserOrderProvider with ChangeNotifier {
   Timer? orderTimer;
   int? ID;
 
-  /// Ensure rating dialog opens only once per orderId
+  /// Ensure the rating dialog opens only once per orderId.
+  ///
+  /// Persisted, otherwise the set is empty again on the next app launch and a
+  /// delivered order re-opens the sheet every single time the app is started.
+  static const String _shownRateKey = 'shown_rate_order_ids';
+  static const int _maxStoredShownRates = 200;
+
   final Set<int> _shownRateForOrderIds = {};
+  bool _shownRateLoaded = false;
+
+  /// False until the persisted ids are read back; callers must wait before
+  /// deciding that an order has never been offered a rating.
+  bool get shownRateLoaded => _shownRateLoaded;
+
+  UserOrderProvider() {
+    _loadShownRates();
+  }
+
+  Future<void> _loadShownRates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getStringList(_shownRateKey) ?? const <String>[];
+      _shownRateForOrderIds
+        ..clear()
+        ..addAll(stored.map(int.tryParse).whereType<int>());
+    } catch (_) {
+      // Fall back to the in-memory set for this session.
+    }
+    _shownRateLoaded = true;
+    notifyListeners();
+  }
 
   bool hasShownRate(int orderId) => _shownRateForOrderIds.contains(orderId);
 
-  void markRateShown(int orderId) {
-    _shownRateForOrderIds.add(orderId);
+  Future<void> markRateShown(int orderId) async {
+    if (!_shownRateForOrderIds.add(orderId)) return;
+
+    // The set is insertion ordered, so the oldest ids drop out first.
+    while (_shownRateForOrderIds.length > _maxStoredShownRates) {
+      _shownRateForOrderIds.remove(_shownRateForOrderIds.first);
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _shownRateKey,
+        _shownRateForOrderIds.map((id) => id.toString()).toList(),
+      );
+    } catch (_) {
+      // Keeping it in memory is still better than re-opening the sheet now.
+    }
   }
 
   /// Cache: last time orders were fetched
