@@ -1,0 +1,322 @@
+<title>Eboro Instagram Kit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Poppins:wght@400;600&display=swap">
+<style>
+/* Layout: a single reading column; each post is a row of phone-shaped preview + ready-to-copy caption */
+:root{
+  --bg:#FBF7F4; --surface:#FFFFFF; --ink:#1A2733; --muted:#5D6B78; --line:#E9E1DB;
+  --red:#C12732; --red-soft:#FBE7E8; --navy:#1F3A52; --orange:#E07A12;
+  --display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --body:"IBM Plex Sans Arabic",system-ui,sans-serif;
+  --latin:"Poppins","IBM Plex Sans Arabic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121A22; --surface:#1A2530; --ink:#EEF2F5; --muted:#A3B0BC; --line:#2A3846;
+  --red:#F0565F; --red-soft:#3A1E24; --navy:#9CC2E0; --orange:#F5A04A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121A22; --surface:#1A2530; --ink:#EEF2F5; --muted:#A3B0BC; --line:#2A3846;
+  --red:#F0565F; --red-soft:#3A1E24; --navy:#9CC2E0; --orange:#F5A04A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);line-height:1.25;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,6vw,44px);color:var(--navy)}
+h2{font-size:26px;color:var(--navy)}
+h3{font-size:19px}
+p{margin:0}
+.eyebrow{font-family:var(--display);font-weight:700;font-size:14px;color:var(--red);letter-spacing:.02em}
+.lead{color:var(--muted);font-size:18px;max-width:62ch}
+header{display:flex;flex-direction:column;gap:14px}
+section{display:flex;flex-direction:column;gap:20px}
+
+/* city field */
+.city{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.city label{font-weight:700}
+.city input{font:inherit;font-family:var(--latin);direction:ltr;flex:1 1 200px;min-width:0;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.city small{color:var(--muted);flex-basis:100%}
+
+/* checklist */
+ol.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+ol.steps li::before{content:counter(s);font-family:var(--display);font-weight:700;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--red-soft);color:var(--red)}
+ol.steps li.done{opacity:.55}
+ol.steps li.done::before{content:"✓";background:var(--red);color:#fff}
+ol.steps b{display:block}
+ol.steps span{color:var(--muted);font-size:15px}
+ol.steps input[type=checkbox]{width:22px;height:22px;accent-color:var(--red);margin-top:6px}
+.inline-copy{font-family:var(--latin);direction:ltr;unicode-bidi:isolate;background:var(--red-soft);color:var(--red);padding:1px 8px;border-radius:6px;font-weight:600;white-space:nowrap}
+
+/* copy boxes */
+.copybox{display:flex;flex-direction:column;gap:10px;min-width:0}
+.copybox pre{margin:0;direction:ltr;text-align:left;font-family:var(--latin);font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--ink)}
+button.copy{align-self:flex-start;font:inherit;font-weight:700;cursor:pointer;border:0;border-radius:999px;padding:9px 20px;background:var(--red);color:#fff}
+button.copy.ok{background:var(--navy);color:var(--bg)}
+button.copy:focus-visible,input:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+
+/* profile card */
+.profile{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.field{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.field .k{font-size:14px;color:var(--muted);font-weight:500}
+
+/* posts */
+.post{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:24px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px}
+.post img{width:100%;border-radius:12px;display:block;box-shadow:0 6px 20px rgba(26,39,51,.12)}
+.post .meta{display:flex;flex-direction:column;gap:12px;min-width:0}
+.day{display:inline-flex;align-self:flex-start;gap:8px;align-items:center;font-family:var(--display);font-weight:700;font-size:14px;background:var(--navy);color:var(--bg);border-radius:999px;padding:4px 14px}
+.kind{font-size:14px;color:var(--muted)}
+.ar{color:var(--muted);font-size:15px}
+.stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.stories .post{grid-template-columns:1fr}
+.stories .post img{max-width:240px}
+@media (max-width:640px){.post{grid-template-columns:1fr}.post img{max-width:320px}}
+
+.tip{background:var(--red-soft);border-radius:16px;padding:16px 18px}
+ul.plain{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
+.howto{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.howto .field ol{margin:0;padding-inline-start:20px}
+footer{color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:no-preference){button.copy{transition:background .2s}}
+</style>
+
+<div class="wrap" dir="rtl" lang="ar">
+
+<header>
+  <div class="eyebrow">Eboro · انستجرام</div>
+  <h1>كل حاجة جاهزة لحساب Eboro على انستجرام</h1>
+  <p class="lead">فيها 6 بوستات و2 ستوري متصممين بألوان Eboro، والكلام اللي هيتكتب تحت كل صورة بالإيطالي، والبايو، وجدول النشر. إنت بس هتحفظ الصورة، وتنسخ الكلام، وتنزّلهم.</p>
+  <div class="city">
+    <label for="city">اسم مدينتك بالإنجليزي:</label>
+    <input id="city" type="text" placeholder="مثلاً Milano" autocomplete="off">
+    <small>اكتب اسم المدينة اللي التطبيق شغّال فيها، وهتتضاف الهاشتاجات بتاعتها تلقائيًا في كل كلام هتنسخه.</small>
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">الخطوة الأولى · مرة واحدة بس</div>
+  <h2>جهّز الحساب</h2>
+  <ol class="steps" id="setup">
+    <li><div><b>نزّل تطبيق Instagram واعمل حساب جديد</b><span>استخدم إيميل الشغل. اسم المستخدم المقترح <span class="inline-copy">eboro.it</span>، ولو مش متاح جرّب <span class="inline-copy">eboro.app</span>.</span></div><input type="checkbox" aria-label="تم"></li>
+    <li><div><b>حوّل الحساب لحساب احترافي (Business)</b><span>من البروفايل: ☰ ← Settings ← Account type and tools ← Switch to professional account، واختار Business والفئة Food Delivery Service. ده مجاني، وبيديك أرقام عن الزوار وزرار للتواصل.</span></div><input type="checkbox" aria-label="تم"></li>
+    <li><div><b>حط صورة البروفايل</b><span>استخدم لوجو Eboro، وهو موجود في المشروع في <span class="inline-copy">images/icons/logo.png</span>.</span></div><input type="checkbox" aria-label="تم"></li>
+    <li><div><b>انسخ الاسم والبايو واللينك من تحت</b><span>Edit profile ← Name و Bio و Links.</span></div><input type="checkbox" aria-label="تم"></li>
+    <li><div><b>نزّل أول 3 بوستات ورا بعض في نفس اليوم</b><span>عشان أي حد يفتح الحساب يلاقي صف كامل مش فاضي. ابدأ بالبوست 3 وبعده 2 وبعده 1، لأن آخر بوست بينزل هو اللي بيظهر في الأول.</span></div><input type="checkbox" aria-label="تم"></li>
+  </ol>
+</section>
+
+<section>
+  <div class="eyebrow">البروفايل</div>
+  <h2>الاسم والبايو واللينك</h2>
+  <div class="profile">
+    <div class="field"><span class="k">الاسم (Name)</span><div class="copybox"><pre>Eboro | Consegna a domicilio</pre><button class="copy">نسخ</button></div></div>
+    <div class="field"><span class="k">اللينك (Links)</span><div class="copybox"><pre>https://eboro.it/app</pre><button class="copy">نسخ</button></div></div>
+    <div class="field" style="grid-column:1/-1"><span class="k">البايو (Bio): أقل من 150 حرف</span><div class="copybox"><pre>🛵 Ristoranti, spesa, farmacia e negozi a domicilio
+🎁 -3€ sul primo ordine con BENVENUTO
+📲 Scarica l'app gratis 👇</pre><button class="copy">نسخ</button></div>
+      <p class="ar">معناه: مطاعم وسوبرماركت وصيدلية ومحلات لحد البيت · خصم 3€ على أول طلب بكود BENVENUTO · نزّل التطبيق مجانًا.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">البوستات · 6 بوستات على أسبوعين</div>
+  <h2>انشر بوست كل يوم اتنين وأربع وجمعة</h2>
+  <p class="lead">أحسن وقت للنشر في إيطاليا من 12:00 لـ 13:30 الضهر، أو من 19:00 لـ 21:00 بالليل، لأن ده وقت ما الناس بتفكّر تطلب أكل.</p>
+
+  <article class="post">
+    <img src="posts/post1.jpg" alt="بوست: Il tuo quartiere, a domicilio">
+    <div class="meta">
+      <span class="day">الأسبوع 1 · الاتنين</span>
+      <h3>بوست التعارف</h3>
+      <p class="ar">بيقول للناس إن Eboro بقى على انستجرام، وبيعرّفهم إحنا بنعمل إيه.</p>
+      <div class="copybox"><pre data-cap>Ciao! 👋 Eboro è arrivato su Instagram.
+
+Ristoranti, spesa, farmacia e negozi della tua città, consegnati direttamente a casa tua.
+
+Seguici per offerte, novità e i migliori locali in zona 🧡
+
+📲 Scarica l'app: link in bio
+
+#eboro #consegnaadomicilio #fooddelivery #ciboadomicilio #delivery #ordinaonline{CITY}</pre><button class="copy">نسخ الكلام</button></div>
+    </div>
+  </article>
+
+  <article class="post">
+    <img src="posts/post2.jpg" alt="بوست: خصم 3 يورو بكود BENVENUTO">
+    <div class="meta">
+      <span class="day">الأسبوع 1 · الأربع</span>
+      <h3>كود الخصم BENVENUTO</h3>
+      <p class="ar">ده أهم بوست لأنه بيجيب طلبات. ممكن تعيد نشره كل شهر.</p>
+      <div class="copybox"><pre data-cap>Il tuo primo ordine su Eboro costa meno 🎉
+
+Usa il codice BENVENUTO e ricevi 3€ di sconto sul tuo primo ordine.
+
+1️⃣ Scarica l'app (link in bio)
+2️⃣ Scegli cosa ti va
+3️⃣ Inserisci BENVENUTO al pagamento
+
+Buon appetito! 😋
+
+#eboro #codicesconto #primoordine #fooddelivery #consegnaadomicilio #offerte{CITY}</pre><button class="copy">نسخ الكلام</button></div>
+    </div>
+  </article>
+
+  <article class="post">
+    <img src="posts/post3.jpg" alt="بوست: Come funziona في 3 خطوات">
+    <div class="meta">
+      <span class="day">الأسبوع 1 · الجمعة</span>
+      <h3>إزاي التطبيق بيشتغل</h3>
+      <p class="ar">بيشرح الطلب في 3 خطوات: اختار، اطلب، استلم.</p>
+      <div class="copybox"><pre data-cap>Ordinare con Eboro è facilissimo 👇
+
+1. Scegli: ristorante, supermercato, farmacia o negozio
+2. Ordina e paga come preferisci: carta, PayPal o contanti
+3. Ricevi a casa e segui il rider in tempo reale 🛵
+
+Provalo oggi, il link è in bio!
+
+#eboro #comefunziona #fooddelivery #consegnaadomicilio #rider #ciboadomicilio{CITY}</pre><button class="copy">نسخ الكلام</button></div>
+    </div>
+  </article>
+
+  <article class="post">
+    <img src="posts/post4.jpg" alt="بوست: Tutto quello che ti serve">
+    <div class="meta">
+      <span class="day">الأسبوع 2 · الاتنين</span>
+      <h3>مش أكل بس</h3>
+      <p class="ar">بيوضح إن فيه سوبرماركت وصيدلية ومحلات، مش مطاعم بس.</p>
+      <div class="copybox"><pre data-cap>Non solo cibo 🍕🛒💊🛍️
+
+Con Eboro ordini dai ristoranti, fai la spesa, ricevi i prodotti della farmacia e compri nei negozi della tua città. Tutto in un'unica app.
+
+📲 Link in bio
+
+#eboro #spesaadomicilio #farmaciaadomicilio #fooddelivery #negozi #consegnaadomicilio{CITY}</pre><button class="copy">نسخ الكلام</button></div>
+    </div>
+  </article>
+
+  <article class="post">
+    <img src="posts/post5.jpg" alt="بوست: Scarica l'app gratis">
+    <div class="meta">
+      <span class="day">الأسبوع 2 · الأربع</span>
+      <h3>نزّل التطبيق</h3>
+      <p class="ar">بيبعت الناس للينك اللي في البايو عشان يحمّلوا التطبيق.</p>
+      <div class="copybox"><pre data-cap>Eboro è gratis su iPhone e Android 📲
+
+Scarica l'app dal link in bio e ordina in pochi tocchi.
+
+🍎 App Store
+🤖 Google Play
+
+Nuovo cliente? Usa il codice BENVENUTO per 3€ di sconto 🎁
+
+#eboro #app #fooddelivery #consegnaadomicilio #scaricalapp #ordinaonline{CITY}</pre><button class="copy">نسخ الكلام</button></div>
+    </div>
+  </article>
+
+  <article class="post">
+    <img src="posts/post6.jpg" alt="بوست: Hai un ristorante o un negozio?">
+    <div class="meta">
+      <span class="day">الأسبوع 2 · الجمعة</span>
+      <h3>للمطاعم والمحلات</h3>
+      <p class="ar">موجّه لأصحاب المطاعم والمحلات عشان ينضموا لـ Eboro ويبيعوا عليه.</p>
+      <div class="copybox"><pre data-cap>Hai un ristorante, un bar, un supermercato o un negozio? 🏪
+
+Con Eboro raggiungi nuovi clienti in zona e vendi a domicilio con i nostri rider.
+
+✅ Nuovi clienti
+✅ Consegna con i nostri rider
+✅ Gestisci tutto dall'app
+
+📩 Scrivici in DM per diventare partner!
+
+#eboro #ristoranti #partner #negozilocali #fooddelivery #businesslocale{CITY}</pre><button class="copy">نسخ الكلام</button></div>
+    </div>
+  </article>
+</section>
+
+<section>
+  <div class="eyebrow">الستوري · بتختفي بعد 24 ساعة</div>
+  <h2>ستوري مع كل بوست</h2>
+  <p class="lead">في نفس يوم البوست نزّل واحدة من دول. ضيف عليها ملصق Link (☺ ← Link) وحط فيه <span class="inline-copy">https://eboro.it/app</span> عشان الناس تدوس وتحمّل التطبيق على طول.</p>
+  <div class="stories">
+    <article class="post"><img src="posts/story1.jpg" alt="ستوري: كود BENVENUTO"><div class="meta"><h3>ستوري الخصم</h3><p class="ar">نزّلها مع بوست الخصم، وبعدها مرة كل أسبوع.</p></div></article>
+    <article class="post"><img src="posts/story2.jpg" alt="ستوري: Ordina. Rilassati. Arriva."><div class="meta"><h3>ستوري الموتوسيكل</h3><p class="ar">نزّلها في أي يوم ما فيهوش بوست.</p></div></article>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">الشرح</div>
+  <h2>إزاي تنزّل بوست أو ستوري</h2>
+  <div class="howto">
+    <div class="field"><h3>بوست</h3><ol>
+      <li>من الصفحة دي، دوس على الصورة دوسة طويلة ← حفظ الصورة.</li>
+      <li>دوس «نسخ الكلام» تحت الصورة.</li>
+      <li>افتح Instagram ← زرار ＋ تحت ← POST ← اختار الصورة ← Next.</li>
+      <li>دوس على «Write a caption» والصق الكلام.</li>
+      <li>دوس Share. خلاص كده.</li>
+    </ol></div>
+    <div class="field"><h3>ستوري</h3><ol>
+      <li>احفظ صورة الستوري بنفس الطريقة.</li>
+      <li>في Instagram ← ＋ ← STORY ← اختار الصورة.</li>
+      <li>دوس على ☺ فوق ← Link ← الصق <span class="inline-copy">eboro.it/app</span>.</li>
+      <li>حط الملصق في مكان فاضي ← Your story.</li>
+    </ol></div>
+    <div class="field"><h3>بعد ما تنشر</h3><ul class="plain">
+      <li>رد على أي تعليق أو رسالة في نفس اليوم.</li>
+      <li>اعمل Follow للمطاعم والمحلات اللي على Eboro، واعمل لهم Tag في الستوري.</li>
+      <li>لما مطعم ينضم، صوّر أكلة من عنده ونزّلها ستوري وانت عامل له Tag.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">بعد الأسبوعين</div>
+  <h2>تنشر إيه بعد كده؟</h2>
+  <div class="tip">
+    <ul class="plain">
+      <li><b>كل أسبوع «مطعم الأسبوع»:</b> صورة أكلة حلوة من مطعم على التطبيق، واعمل له Tag.</li>
+      <li><b>العروض:</b> أي خصم أو «طبق اليوم» في التطبيق، نزّله ستوري.</li>
+      <li><b>آراء الزباين:</b> لو حد كتب تقييم حلو، صوّره ونزّله ستوري.</li>
+      <li><b>كل شهر:</b> رجّع نشر بوست كود BENVENUTO.</li>
+    </ul>
+  </div>
+  <p class="lead">ولو عايز تصميمات أكتر لأي مطعم أو عرض، ابعتلي اسمه أو صورته وأنا أعملهالك بنفس الشكل.</p>
+</section>
+
+<footer>الصور كمان موجودة في المشروع في فولدر <span class="inline-copy">instagram/posts</span>.</footer>
+</div>
+
+<script>
+(function(){
+  var city=document.getElementById('city');
+  var caps=[].slice.call(document.querySelectorAll('pre[data-cap]'));
+  caps.forEach(function(p){p.dataset.tpl=p.textContent;});
+  function tag(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]/g,'').toLowerCase();}
+  function render(){
+    var c=tag(city.value);
+    var extra=c?' #'+c+' #'+c+'food #'+c+'delivery':'';
+    caps.forEach(function(p){p.textContent=p.dataset.tpl.replace('{CITY}',extra);});
+  }
+  try{city.value=localStorage.getItem('eboro-city')||'';}catch(e){}
+  city.addEventListener('input',function(){render();try{localStorage.setItem('eboro-city',city.value);}catch(e){}});
+  render();
+
+  document.querySelectorAll('button.copy').forEach(function(b){
+    var label=b.textContent;
+    b.addEventListener('click',function(){
+      var pre=b.parentNode.querySelector('pre');var text=pre.textContent;
+      function done(){b.textContent='اتنسخ ✓';b.classList.add('ok');setTimeout(function(){b.textContent=label;b.classList.remove('ok');},1800);}
+      function fallback(){var r=document.createRange();r.selectNodeContents(pre);var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='الكلام متحدد، انسخه بإيدك';}
+      try{navigator.clipboard.writeText(text).then(done,fallback);}catch(e){fallback();}
+    });
+  });
+
+  var boxes=[].slice.call(document.querySelectorAll('#setup input[type=checkbox]'));
+  var saved=[];try{saved=JSON.parse(localStorage.getItem('eboro-setup')||'[]');}catch(e){}
+  boxes.forEach(function(x,i){
+    x.checked=!!saved[i];x.closest('li').classList.toggle('done',x.checked);
+    x.addEventListener('change',function(){x.closest('li').classList.toggle('done',x.checked);
+      try{localStorage.setItem('eboro-setup',JSON.stringify(boxes.map(function(y){return y.checked;})));}catch(e){}});
+  });
+})();
+</script>
