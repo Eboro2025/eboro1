@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:eboro/API/Favorite.dart';
 import 'package:eboro/Helper/ImageHelper.dart';
+import 'package:eboro/Helper/InstagramShare.dart';
 import 'package:eboro/Helper/ProviderData.dart';
 import 'package:eboro/RealTime/Provider/ProviderController.dart';
 import 'package:eboro/Widget/Progress.dart';
@@ -1284,6 +1285,17 @@ class ClickProvider2 extends State<ClickProvider>
                   onTap: () {
                     Navigator.pop(context);
                     Auth2.show('Condivisione su Facebook...');
+                  },
+                ),
+                _buildShareOption(
+                  icon: FontAwesomeIcons.instagram,
+                  label: 'Instagram',
+                  color: const Color(0xFFE4405F),
+                  onTap: () {
+                    Navigator.pop(context);
+                    shareToInstagram(this.context,
+                        text: 'Scopri $storeName su Eboro!\n📍 $storeAddress',
+                        imageUrl: providerItem.logo?.toString());
                   },
                 ),
                 _buildShareOption(

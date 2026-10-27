@@ -7,6 +7,8 @@ import 'package:eboro/RealTime/Provider/CartTextProvider.dart';
 import 'package:eboro/main.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:eboro/Helper/InstagramShare.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -102,6 +104,17 @@ class ProductDescription2 extends State<ProductDescription> {
                     } catch (e) {
                       Auth2.show('Errore apertura WhatsApp');
                     }
+                  },
+                ),
+                _buildShareOption(
+                  context,
+                  icon: FontAwesomeIcons.instagram,
+                  label: 'Instagram',
+                  color: const Color(0xFFE4405F),
+                  onTap: () {
+                    Navigator.pop(context);
+                    shareToInstagram(this.context,
+                        text: shareText, imageUrl: product.image?.toString());
                   },
                 ),
                 _buildShareOption(
